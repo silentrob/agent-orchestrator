@@ -165,8 +165,21 @@ function printTableHeader(): void {
   console.log(chalk.dim(`  ${"─".repeat(totalWidth)}`));
 }
 
+const TERMINAL_STATUSES = new Set([
+  "merged",
+  "killed",
+  "cleanup",
+  "done",
+  "terminated",
+]);
+
 function printSessionRow(info: SessionInfo): void {
   const prStr = info.prNumber ? `#${info.prNumber}` : "-";
+
+  // When activity wasn't detected but session is still "active" (non-terminal status), show working
+  const activityDisplay =
+    info.activity ??
+    (info.status && !TERMINAL_STATUSES.has(info.status) ? ("active" as ActivityState) : null);
 
   const row =
     padCol(chalk.green(info.name), COL.session) +
@@ -180,7 +193,7 @@ function printSessionRow(info: SessionInfo): void {
         : chalk.dim(info.pendingThreads !== null ? "0" : "-"),
       COL.threads,
     ) +
-    padCol(activityIcon(info.activity), COL.activity) +
+    padCol(activityIcon(activityDisplay), COL.activity) +
     chalk.dim(info.lastActivity);
 
   console.log(`  ${row}`);
@@ -309,6 +322,14 @@ export function registerStatus(program: Command): void {
         printTableHeader();
         for (const info of workers) {
           printSessionRow(info);
+        }
+        if (workers.length > 0) {
+          const exampleSession = workers[0].name;
+          console.log(
+            chalk.dim(
+              `  For live output: open dashboard or run \`tmux attach -t ${exampleSession}\``,
+            ),
+          );
         }
         console.log();
       }

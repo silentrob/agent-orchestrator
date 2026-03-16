@@ -59,3 +59,30 @@ npx node-gyp rebuild
 ```bash
 ln -s /path/to/agent-orchestrator.yaml packages/web/agent-orchestrator.yaml
 ```
+
+### "'agent:in-progress' not found" when backlog claims an issue
+
+**Problem:** The backlog poller picks up an issue but fails when trying to add the `agent:in-progress` label. Error: `'agent:in-progress' not found` or `failed to update ... issue`.
+
+**Cause:** The GitHub repo does not have the agent workflow labels yet. They must exist before the orchestrator can update issues.
+
+**Solution:** Create the labels once using either method below.
+
+**Option 1 — Via API (dashboard must be running):**
+
+```bash
+curl -X POST http://localhost:3000/api/setup-labels
+```
+
+Use your configured dashboard port if different (e.g. `3001`).
+
+**Option 2 — Via GitHub CLI (replace `owner/repo` with your repo, e.g. `silentrob/agent-orchestrator`):**
+
+```bash
+gh label create "agent:backlog" --repo owner/repo --color 6B7280 --description "Available for agent to claim" --force
+gh label create "agent:in-progress" --repo owner/repo --color 7C3AED --description "Agent is working on this" --force
+gh label create "agent:blocked" --repo owner/repo --color DC2626 --description "Agent is blocked" --force
+gh label create "agent:done" --repo owner/repo --color 16A34A --description "Agent completed this" --force
+```
+
+After the labels exist, the next backlog poll (or re-adding `agent:backlog` to the issue) will succeed.

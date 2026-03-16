@@ -1,6 +1,6 @@
 # Competitive Research — Agent Orchestration Tools
 
-_Compiled: 2026-02-13_
+*Compiled: 2026-02-13*
 
 ## Overview
 
@@ -12,11 +12,12 @@ Research into 16+ projects that orchestrate AI coding agents. The goal: understa
 
 ### Gas Town (Steve Yegge)
 
-- **GitHub**: https://github.com/steveyegge/gastown
+- **GitHub**: [https://github.com/steveyegge/gastown](https://github.com/steveyegge/gastown)
 - **Stack**: Go 1.23+ (~189K LOC), SQLite3, Git 2.25+, tmux 3.0+
 - **Stars**: Growing rapidly (released Jan 2026)
 
 **Architecture — MEOW Stack (Molecular Expression of Work):**
+
 
 | Layer                         | What                     | How                                                                            |
 | ----------------------------- | ------------------------ | ------------------------------------------------------------------------------ |
@@ -25,7 +26,9 @@ Research into 16+ projects that orchestrate AI coding agents. The goal: understa
 | **Molecules**                 | Workflow graphs          | Sequenced beads with dependencies, gates, loops                                |
 | **Protomolecules & Formulas** | Reusable templates       | TOML format workflow definitions                                               |
 
+
 **Agent Roles (7 roles, 2 scopes):**
+
 
 | Role         | Scope | Purpose                                                   |
 | ------------ | ----- | --------------------------------------------------------- |
@@ -36,6 +39,7 @@ Research into 16+ projects that orchestrate AI coding agents. The goal: understa
 | **Polecats** | Rig   | Ephemeral "cattle" workers spawned for specific tasks     |
 | **Refinery** | Rig   | Merge queue manager handling conflicts                    |
 | **Witness**  | Rig   | Supervises polecats, unblocks stuck work                  |
+
 
 **Other Abstractions:**
 
@@ -60,7 +64,7 @@ Research into 16+ projects that orchestrate AI coding agents. The goal: understa
 
 ### Par (Coplane)
 
-- **GitHub**: https://github.com/coplane/par
+- **GitHub**: [https://github.com/coplane/par](https://github.com/coplane/par)
 - **Stack**: Python 3.12+
 - **Closest to our current approach**
 
@@ -87,7 +91,7 @@ Research into 16+ projects that orchestrate AI coding agents. The goal: understa
 
 ### CAO — CLI Agent Orchestrator (AWS Labs)
 
-- **GitHub**: https://github.com/awslabs/cli-agent-orchestrator
+- **GitHub**: [https://github.com/awslabs/cli-agent-orchestrator](https://github.com/awslabs/cli-agent-orchestrator)
 - **Stack**: Python, tmux, HTTP server (localhost:9889)
 
 **Key Abstractions:**
@@ -108,7 +112,7 @@ Research into 16+ projects that orchestrate AI coding agents. The goal: understa
 
 ### ccswarm (nwiizo)
 
-- **GitHub**: https://github.com/nwiizo/ccswarm
+- **GitHub**: [https://github.com/nwiizo/ccswarm](https://github.com/nwiizo/ccswarm)
 - **Stack**: Rust (2024 edition), ratatui TUI, Tokio async, OpenTelemetry
 
 **Key Abstractions:**
@@ -127,7 +131,7 @@ Research into 16+ projects that orchestrate AI coding agents. The goal: understa
 
 ### agent-team (nekocode)
 
-- **GitHub**: https://github.com/nekocode/agent-team
+- **GitHub**: [https://github.com/nekocode/agent-team](https://github.com/nekocode/agent-team)
 - **Stack**: Rust 92.8%, npm distribution
 
 **Key Abstractions:**
@@ -145,7 +149,7 @@ Research into 16+ projects that orchestrate AI coding agents. The goal: understa
 
 ### claude-flow (ruvnet)
 
-- **GitHub**: https://github.com/ruvnet/claude-flow
+- **GitHub**: [https://github.com/ruvnet/claude-flow](https://github.com/ruvnet/claude-flow)
 - **Stack**: TypeScript, Node.js 20+, WebAssembly, SQLite, PostgreSQL
 - **Claims**: 100K+ monthly active users, 84.8% SWE-Bench solve rate
 
@@ -176,7 +180,7 @@ Research into 16+ projects that orchestrate AI coding agents. The goal: understa
 
 ### OpenHands (formerly OpenDevin)
 
-- **GitHub**: https://github.com/OpenHands/OpenHands (67.8K stars)
+- **GitHub**: [https://github.com/OpenHands/OpenHands](https://github.com/OpenHands/OpenHands) (67.8K stars)
 - **Stack**: Python 75.5%, TypeScript/React 22.3%, Docker, Kubernetes
 
 **Key Abstractions:**
@@ -197,7 +201,7 @@ Research into 16+ projects that orchestrate AI coding agents. The goal: understa
 
 ### SWE-agent + SWE-ReX (Princeton NLP)
 
-- **GitHub**: https://github.com/SWE-agent/SWE-agent + https://github.com/SWE-agent/SWE-ReX
+- **GitHub**: [https://github.com/SWE-agent/SWE-agent](https://github.com/SWE-agent/SWE-agent) + [https://github.com/SWE-agent/SWE-ReX](https://github.com/SWE-agent/SWE-ReX)
 - **Stack**: Python 94.6%
 
 **Key Abstractions:**
@@ -224,7 +228,7 @@ Agent code remains the same regardless of deployment target.
 
 ### Goose (Block/Square)
 
-- **GitHub**: https://github.com/block/goose
+- **GitHub**: [https://github.com/block/goose](https://github.com/block/goose)
 - **Stack**: Rust 58.9%, TypeScript 33.0%, Go (temporal scheduler)
 
 **Key Abstractions:**
@@ -242,7 +246,7 @@ Agent code remains the same regardless of deployment target.
 
 ### Cline
 
-- **GitHub**: https://github.com/cline/cline
+- **GitHub**: [https://github.com/cline/cline](https://github.com/cline/cline)
 - **Stack**: TypeScript, Node.js, esbuild
 
 **Key Abstractions:**
@@ -258,7 +262,7 @@ Agent code remains the same regardless of deployment target.
 
 ### Multi-Agent Coding System (Danau5tin)
 
-- **GitHub**: https://github.com/Danau5tin/multi-agent-coding-system
+- **GitHub**: [https://github.com/Danau5tin/multi-agent-coding-system](https://github.com/Danau5tin/multi-agent-coding-system)
 - **Stack**: Python, LiteLLM/OpenRouter, Docker
 - **Reached #13 on Stanford's TerminalBench**
 
@@ -281,7 +285,7 @@ Agent code remains the same regardless of deployment target.
 
 ### CCPM (Automaze)
 
-- **GitHub**: https://github.com/automazeio/ccpm
+- **GitHub**: [https://github.com/automazeio/ccpm](https://github.com/automazeio/ccpm)
 - **Stack**: Python, GitHub REST API, Claude Code
 
 **Key Abstractions:**
@@ -295,7 +299,7 @@ Agent code remains the same regardless of deployment target.
 
 ### AI-Agents-Orchestrator (hoangsonww)
 
-- **GitHub**: https://github.com/hoangsonww/AI-Agents-Orchestrator
+- **GitHub**: [https://github.com/hoangsonww/AI-Agents-Orchestrator](https://github.com/hoangsonww/AI-Agents-Orchestrator)
 - **Stack**: Python (Flask + Socket.IO), Vue 3 + Vite, Docker/Kubernetes
 
 **Key Abstractions:**
@@ -309,7 +313,7 @@ Agent code remains the same regardless of deployment target.
 
 ### wshobson/agents
 
-- **GitHub**: https://github.com/wshobson/agents
+- **GitHub**: [https://github.com/wshobson/agents](https://github.com/wshobson/agents)
 - **Stack**: Claude Code plugin ecosystem
 
 **Key Abstractions:**
@@ -326,6 +330,7 @@ Agent code remains the same regardless of deployment target.
 
 ### Cloud Sandbox Platforms
 
+
 | Platform            | Startup Time | Isolation            | API Style            | Cost        |
 | ------------------- | ------------ | -------------------- | -------------------- | ----------- |
 | **Docker (local)**  | ~1-5s        | Container namespace  | Docker CLI/API       | Free        |
@@ -333,6 +338,7 @@ Agent code remains the same regardless of deployment target.
 | **Daytona**         | ~27-90ms     | OCI containers       | Python/TS SDK + REST | Open source |
 | **Modal Sandboxes** | Sub-second   | gVisor containers    | Python SDK           | $0.03/hr    |
 | **Fly.io Machines** | ~200ms-1s    | Firecracker microVMs | REST API             | $0.02/hr    |
+
 
 ### Agent-Sandbox Connection Patterns (per LangChain)
 
@@ -352,6 +358,7 @@ Agent code remains the same regardless of deployment target.
 
 ### Communication Protocols
 
+
 | Protocol             | Use Case                | Used By                          |
 | -------------------- | ----------------------- | -------------------------------- |
 | **REST API**         | Request/response        | OpenHands, Fly.io, Daytona       |
@@ -360,7 +367,9 @@ Agent code remains the same regardless of deployment target.
 | **tmux send-keys**   | Terminal injection      | Our orchestrator, Par, CAO       |
 | **SSE**              | Server → client push    | MCP remote transport             |
 
+
 ### Heartbeat / Health Detection
+
 
 | Pattern                  | Description                          | Used By                     |
 | ------------------------ | ------------------------------------ | --------------------------- |
@@ -370,6 +379,7 @@ Agent code remains the same regardless of deployment target.
 | **File-based signaling** | Status to shared filesystem          | Our metadata files          |
 | **HTTP health endpoint** | `/health` or `/status`               | OpenHands server            |
 | **JSONL mtime**          | Check session file modification time | Our `claude-status`         |
+
 
 ---
 
@@ -430,3 +440,4 @@ Agent code remains the same regardless of deployment target.
 - [E2B](https://e2b.dev/)
 - [Daytona](https://www.daytona.io/)
 - [Fly.io AI](https://fly.io/ai)
+
