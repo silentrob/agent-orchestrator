@@ -86,3 +86,27 @@ gh label create "agent:done" --repo owner/repo --color 16A34A --description "Age
 ```
 
 After the labels exist, the next backlog poll (or re-adding `agent:backlog` to the issue) will succeed.
+
+### Session stuck in "CI is failing" / issue stuck in agent:in-progress (fork or no CI)
+
+**Problem:** The agent keeps getting "CI is failing on your PR. Run `gh pr checks`…" and the issue never moves out of `agent:in-progress`. You're on a fork with no GitHub Actions (or no branch protection), so there are no real CI checks.
+
+**Cause:** The lifecycle uses the SCM (e.g. GitHub) to read PR CI status. When it can't get checks (API error or no workflows), it treats CI as "failing" and sets the session to `ci_failed`, which triggers the default reaction and sends that message. The tracker issue is only updated when the session reaches a terminal state (e.g. merged), so it stays in `agent:in-progress`.
+
+**Solution:**
+
+1. **Stop the message** — Disable the ci-failed reaction in `agent-orchestrator.yaml`:
+
+   ```yaml
+   reactions:
+     "ci-failed":
+       auto: false
+   ```
+
+2. **Unstick the issue** (disk tracker): Edit the issue markdown file (e.g. `.ao/issues/hello-world.md`) and in front-matter set `state: closed` and change `labels` from `[agent:in-progress, ...]` to `[agent:done]` (or remove `agent:in-progress`). Save. The dashboard will then show the issue as done.
+
+3. **Unstick the issue** (GitHub tracker): Use the dashboard or `gh` to remove the `agent:in-progress` label and add `agent:done`, and close the issue if you're done.
+
+4. **Optional:** Merge the PR manually if you're happy with the code; the lifecycle will then move the session to `merged` and (for GitHub) the system can relabel the issue to `merged-unverified` for your verify flow.
+
+Re-enable `reactions["ci-failed"].auto: true` when you have real CI (e.g. GitHub Actions or branch protection) so the agent gets notified when checks actually fail.
