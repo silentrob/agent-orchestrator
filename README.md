@@ -22,7 +22,7 @@ Spawn parallel AI coding agents, each in its own git worktree. Agents autonomous
 
 Agent Orchestrator manages fleets of AI coding agents working in parallel on your codebase. Each agent gets its own git worktree, its own branch, and its own PR. When CI fails, the agent fixes it. When reviewers leave comments, the agent addresses them. You only get pulled in when human judgment is needed.
 
-**Agent-agnostic** (Claude Code, Codex, Aider) · **Runtime-agnostic** (tmux, Docker) · **Tracker-agnostic** (GitHub, Linear)
+**Agent-agnostic** (Claude Code, Codex, Aider) · **Runtime-agnostic** (tmux, Docker) · **Tracker-agnostic** (GitHub, Linear, Disk)
 
 <div align="center">
 
@@ -94,7 +94,7 @@ Eight slots. Every abstraction is swappable.
 | Runtime   | tmux        | docker, k8s, process     |
 | Agent     | claude-code | codex, aider, opencode   |
 | Workspace | worktree    | clone                    |
-| Tracker   | github      | linear                   |
+| Tracker   | github      | linear, disk             |
 | SCM       | github      | —                        |
 | Notifier  | desktop     | slack, composio, webhook |
 | Terminal  | iterm2      | web                      |
@@ -138,6 +138,39 @@ reactions:
 CI fails → agent gets the logs and fixes it. Reviewer requests changes → agent addresses them. PR approved with green CI → you get a notification to merge.
 
 See [`agent-orchestrator.yaml.example`](agent-orchestrator.yaml.example) for the full reference.
+
+### Disk Tracker
+
+The **Disk Tracker** is a local-first issue management system — no GitHub, no Linear account required. Issues are stored as Markdown files in `.ao/issues/` inside your project directory, making them version-controllable and fully offline.
+
+```yaml
+projects:
+  my-app:
+    path: ~/my-app
+    tracker:
+      plugin: disk
+```
+
+Create issues as `.md` files with frontmatter:
+
+```markdown
+---
+title: Fix login bug
+state: open
+priority: 1
+labels: []
+---
+
+Describe the issue here.
+```
+
+Then spawn an agent against any issue file:
+
+```bash
+ao spawn my-app fix-login-bug
+```
+
+The Disk Tracker is ideal for local experimentation, air-gapped environments, or projects that don't use a hosted issue tracker.
 
 ## CLI
 
