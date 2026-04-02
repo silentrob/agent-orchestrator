@@ -1,11 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import {
-  chmodSync,
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-  existsSync,
-} from "node:fs";
+import { chmodSync, mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { createSessionManager } from "../../session-manager.js";
 import { validateConfig } from "../../config.js";
@@ -26,7 +20,12 @@ import type {
   Tracker,
   RuntimeHandle,
 } from "../../types.js";
-import { setupTestContext, teardownTestContext, makeHandle, type TestContext } from "../test-utils.js";
+import {
+  setupTestContext,
+  teardownTestContext,
+  makeHandle,
+  type TestContext,
+} from "../test-utils.js";
 import { installMockOpencode, installMockGit } from "./opencode-helpers.js";
 
 let ctx: TestContext;
@@ -41,7 +40,16 @@ let originalPath: string | undefined;
 
 beforeEach(() => {
   ctx = setupTestContext();
-  ({ tmpDir, sessionsDir, mockRuntime, mockAgent, mockWorkspace, mockRegistry, config, originalPath } = ctx);
+  ({
+    tmpDir,
+    sessionsDir,
+    mockRuntime,
+    mockAgent,
+    mockWorkspace,
+    mockRegistry,
+    config,
+    originalPath,
+  } = ctx);
 });
 
 afterEach(() => {
@@ -981,6 +989,63 @@ describe("spawn", () => {
     await spawnPromise;
     expect(mockRuntime.sendMessage).toHaveBeenCalled();
     vi.useRealTimers();
+  });
+
+  describe("planner workerRole (0002)", () => {
+    it("persists planner metadata and includes planner layer in launch prompt", async () => {
+      const sm = createSessionManager({ config, registry: mockRegistry });
+      const session = await sm.spawn({
+        projectId: "my-app",
+        issueId: "INT-200",
+        workerRole: "planner",
+      });
+
+      const raw = readMetadataRaw(sessionsDir, session.id);
+      expect(raw?.workerRole).toBe("planner");
+      expect(raw?.planArtifactRelPath).toBe(".ao/plan.md");
+      expect(raw?.planArtifactIssue).toBe("INT-200");
+      expect(session.metadata.workerRole).toBe("planner");
+      expect(session.metadata.planArtifactRelPath).toBe(".ao/plan.md");
+      expect(session.metadata.planArtifactIssue).toBe("INT-200");
+
+      const launchCfg = vi.mocked(mockAgent.getLaunchCommand).mock.calls.at(-1)?.[0];
+      expect(launchCfg?.prompt).toContain("## Planner role");
+      expect(launchCfg?.prompt).toContain(".ao/plan.md");
+    });
+
+    it("appends Existing plan on disk when .ao/plan.md exists before spawn", async () => {
+      const wsPath = join(tmpDir, "wt-existing-plan");
+      mkdirSync(join(wsPath, ".ao"), { recursive: true });
+      writeFileSync(join(wsPath, ".ao", "plan.md"), "---\nstatus: draft\n---\nPrior plan\n");
+      vi.mocked(mockWorkspace.create).mockResolvedValue({
+        path: wsPath,
+        branch: "feat/INT-1",
+        sessionId: "app-1",
+        projectId: "my-app",
+      });
+
+      const sm = createSessionManager({ config, registry: mockRegistry });
+      await sm.spawn({ projectId: "my-app", workerRole: "planner" });
+
+      const launchCfg = vi.mocked(mockAgent.getLaunchCommand).mock.calls.at(-1)?.[0];
+      expect(launchCfg?.prompt).toContain("Existing plan on disk");
+      expect(launchCfg?.prompt).toContain(join(wsPath, ".ao", "plan.md"));
+    });
+
+    it("persists workerRole without planner artifact keys or planner prompt for executor", async () => {
+      const sm = createSessionManager({ config, registry: mockRegistry });
+      const session = await sm.spawn({
+        projectId: "my-app",
+        workerRole: "executor",
+      });
+
+      const raw = readMetadataRaw(sessionsDir, session.id);
+      expect(raw?.workerRole).toBe("executor");
+      expect(raw?.planArtifactRelPath).toBeUndefined();
+
+      const launchCfg = vi.mocked(mockAgent.getLaunchCommand).mock.calls.at(-1)?.[0];
+      expect(launchCfg?.prompt).not.toContain("## Planner role");
+    });
   });
 
   describe("spawnOrchestrator", () => {
@@ -1996,4 +2061,3 @@ describe("spawn", () => {
     });
   });
 });
-

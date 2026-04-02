@@ -71,7 +71,7 @@ Derived from `0002_PLAN.md` (approved). No scope beyond IN-SCOPE.
 
 - **Priority:** High
 - **Effort:** L
-- **Status:** not started
+- **Status:** complete
 - **Description:** In `createSessionManager` → `spawn`, after metadata write: `updateMetadata` with `workerRole` when set; for `workerRole === "planner"` set `planArtifactRelPath` default `.ao/plan.md` and `planArtifactIssue` when `issueId` present. Concatenate `buildPlannerArtifactLayer({ projectId, issueId, issueContext })` ahead of or merged with `buildPrompt` result when planner. Optional minimal fs probe: if `.ao/plan.md` exists under `workspacePath`, append short “Existing plan on disk” block to composed prompt (plan §A4).
 - **Dependencies:** T01, T02
 - **Files to Change:** `packages/core/src/session-manager.ts`; integration/unit tests as feasible
@@ -79,6 +79,13 @@ Derived from `0002_PLAN.md` (approved). No scope beyond IN-SCOPE.
   - Spawning with `workerRole: "planner"` persists metadata keys on disk via `updateMetadata`.
   - Composed prompt includes planner layer; existing file probe behavior matches chosen minimal strategy (probe or document agent-only — implement one per plan).
   - Uses `buildPrompt`, `updateMetadata` from API table.
+
+- **Proof of Work:** `session-manager.ts` — import `buildPlannerArtifactLayer`; after `buildPrompt`, append planner layer + optional “Existing plan on disk” when `.ao/plan.md` exists; merge `workerRole` / `planArtifactRelPath` / `planArtifactIssue` into `session.metadata` before `updateMetadata`. Tests: `spawn.test.ts` describe `planner workerRole (0002)`.
+- **Acceptance Criteria Check-off:**
+  - ✓ Planner spawn persists `workerRole`, `planArtifactRelPath`, `planArtifactIssue` on disk and on returned `session.metadata`.
+  - ✓ Launch prompt includes planner layer; `existsSync` probe appends existing-plan section when file present.
+  - ✓ Uses `buildPrompt`, `updateMetadata`, `buildPlannerArtifactLayer` (delta).
+- **Test Artifacts:** `spawn.test.ts` — `persists planner metadata and includes planner layer in launch prompt`, `appends Existing plan on disk when .ao/plan.md exists before spawn`, `persists workerRole without planner artifact keys or planner prompt for executor`.
 
 ### T04 — Restore path audit for planner metadata
 

@@ -55,6 +55,7 @@ import {
   reserveSessionId,
 } from "./metadata.js";
 import { buildPrompt } from "./prompt-builder.js";
+import { buildPlannerArtifactLayer } from "./prompt/artifact-layers-by-role.js";
 import {
   getSessionsDir,
   getWorktreesDir,
@@ -1019,7 +1020,7 @@ export function createSessionManager(deps: SessionManagerDeps): OpenCodeSessionM
       }
     }
 
-    const composedPrompt = buildPrompt({
+    const basePrompt = buildPrompt({
       project,
       projectId: spawnConfig.projectId,
       issueId: spawnConfig.issueId,
@@ -1028,6 +1029,21 @@ export function createSessionManager(deps: SessionManagerDeps): OpenCodeSessionM
       lineage: spawnConfig.lineage,
       siblings: spawnConfig.siblings,
     });
+
+    let composedPrompt = basePrompt;
+    if (spawnConfig.workerRole === "planner") {
+      const plannerLayer = buildPlannerArtifactLayer({
+        projectId: spawnConfig.projectId,
+        issueId: spawnConfig.issueId,
+        issueContext,
+      });
+      composedPrompt = `${basePrompt}\n\n${plannerLayer}`;
+      const defaultPlanRel = ".ao/plan.md";
+      const planAbsPath = join(workspacePath, defaultPlanRel);
+      if (existsSync(planAbsPath)) {
+        composedPrompt += `\n\n## Existing plan on disk\n\nA file already exists at \`${planAbsPath}\`. Read it, preserve valid YAML frontmatter, and update the plan body as needed rather than discarding it.`;
+      }
+    }
 
     // Get agent launch config and create runtime — clean up workspace on failure
     const opencodeIssueSessionStrategy = project.opencodeIssueSessionStrategy ?? "reuse";
@@ -1073,7 +1089,8 @@ export function createSessionManager(deps: SessionManagerDeps): OpenCodeSessionM
           AO_CALLER_TYPE: "agent",
           AO_PROJECT_ID: spawnConfig.projectId,
           AO_CONFIG_PATH: config.configPath,
-          ...(config.port !== undefined && config.port !== null && { AO_PORT: String(config.port) }),
+          ...(config.port !== undefined &&
+            config.port !== null && { AO_PORT: String(config.port) }),
         },
       });
     } catch (err) {
@@ -1144,6 +1161,16 @@ export function createSessionManager(deps: SessionManagerDeps): OpenCodeSessionM
         );
         if (discovered) {
           session.metadata["opencodeSessionId"] = discovered;
+        }
+      }
+
+      if (spawnConfig.workerRole) {
+        session.metadata.workerRole = spawnConfig.workerRole;
+      }
+      if (spawnConfig.workerRole === "planner") {
+        session.metadata.planArtifactRelPath = ".ao/plan.md";
+        if (spawnConfig.issueId) {
+          session.metadata.planArtifactIssue = spawnConfig.issueId;
         }
       }
 
@@ -1372,7 +1399,7 @@ export function createSessionManager(deps: SessionManagerDeps): OpenCodeSessionM
         AO_CALLER_TYPE: "orchestrator",
         AO_PROJECT_ID: orchestratorConfig.projectId,
         AO_CONFIG_PATH: config.configPath,
-        ...(config.port !== undefined && config.port !== null && { AO_PORT: String(config.port) })
+        ...(config.port !== undefined && config.port !== null && { AO_PORT: String(config.port) }),
       },
     });
 
