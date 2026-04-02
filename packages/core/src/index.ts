@@ -61,6 +61,9 @@ export type { LifecycleManagerDeps } from "./lifecycle-manager.js";
 export { buildPrompt, BASE_AGENT_PROMPT } from "./prompt-builder.js";
 export type { PromptBuildConfig } from "./prompt-builder.js";
 
+export { buildPlannerArtifactLayer } from "./prompt/artifact-layers-by-role.js";
+export type { PlannerArtifactLayerContext } from "./prompt/artifact-layers-by-role.js";
+
 // Decomposer — LLM-driven task decomposition
 export {
   decompose,
@@ -83,7 +86,6 @@ export type {
 // Orchestrator prompt — generates orchestrator context for `ao start`
 export { generateOrchestratorPrompt } from "./orchestrator-prompt.js";
 export type { OrchestratorPromptConfig } from "./orchestrator-prompt.js";
-
 
 // Global pause constants and utilities
 export {

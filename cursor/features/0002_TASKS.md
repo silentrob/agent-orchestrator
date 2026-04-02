@@ -53,13 +53,19 @@ Derived from `0002_PLAN.md` (approved). No scope beyond IN-SCOPE.
 
 - **Priority:** High
 - **Effort:** M
-- **Status:** not started
+- **Status:** complete
 - **Description:** New module with `PlannerArtifactLayerContext` and `buildPlannerArtifactLayer(ctx)` per plan Delta. Content must cover `.ao/plan.md`, YAML frontmatter fields/defaults (`requires_approval` default false), read-update on respawn, no implementation PR as planner. Export from `@composio/ao-core`.
 - **Dependencies:** none
 - **Files to Change:** `packages/core/src/prompt/artifact-layers-by-role.ts` (new); `packages/core/src/index.ts`; `packages/core/src/__tests__/` or colocated `*.test.ts`
 - **Acceptance Criteria:**
   - Exported signatures match plan Delta exactly.
   - Unit test asserts non-empty string and mentions plan path + frontmatter + respawn guidance.
+
+- **Proof of Work:** Added `packages/core/src/prompt/artifact-layers-by-role.ts` (`PlannerArtifactLayerContext`, `buildPlannerArtifactLayer`). Exported from `packages/core/src/index.ts`. Tests in `packages/core/src/__tests__/artifact-layers-by-role.test.ts`.
+- **Acceptance Criteria Check-off:**
+  - ✓ `PlannerArtifactLayerContext` / `buildPlannerArtifactLayer(ctx): string` match plan Delta.
+  - ✓ Tests cover `.ao/plan.md`, frontmatter/YAML/`requires_approval`, respawn/read-existing guidance.
+- **Test Artifacts:** `artifact-layers-by-role.test.ts` — five tests (main guidance, issue+project, no issueId, issueContext, no implementation PR).
 
 ### T03 — Spawn: metadata + planner prompt composition
 
