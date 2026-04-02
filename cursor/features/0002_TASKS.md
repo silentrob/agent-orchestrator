@@ -115,13 +115,19 @@ Derived from `0002_PLAN.md` (approved). No scope beyond IN-SCOPE.
 
 - **Priority:** High
 - **Effort:** M
-- **Status:** not started
+- **Status:** complete
 - **Description:** Add Commander options to `ao spawn` forwarding `prompt` and `workerRole` to `sessionManager.spawn`.
 - **Dependencies:** T01
 - **Files to Change:** `packages/cli/src/commands/spawn.ts`; CLI tests if any
 - **Acceptance Criteria:**
   - `ao spawn` accepts optional `--prompt` and `--worker-role <role>` with validation against planner union.
   - `sm.spawn` receives `prompt` / `workerRole` per options.
+
+- **Proof of Work:** `spawn.ts` — `SpawnSessionOptions`, `parseWorkerRole` / `WORKER_ROLES`, `--prompt` and `--worker-role` options; `spawnSession` passes through to `sm.spawn`; decompose multi-spawn includes same fields. Tests in `packages/cli/__tests__/commands/spawn.test.ts`.
+- **Acceptance Criteria Check-off:**
+  - ✓ Flags accepted; roles validated against full `WorkerRole` union (planner, executor, validator, reproducer).
+  - ✓ `getSessionManager` → `spawn` receives `prompt` / `workerRole` when provided.
+- **Test Artifacts:** `spawn.test.ts` — `passes --prompt and --worker-role to sessionManager.spawn()`, `rejects invalid --worker-role`.
 
 ### T07 — Web POST `/api/spawn`: `prompt` + `workerRole`
 

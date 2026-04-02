@@ -11,6 +11,7 @@ import {
   TERMINAL_STATUSES,
   type OrchestratorConfig,
   type DecomposerConfig,
+  type WorkerRole,
   DEFAULT_DECOMPOSER_CONFIG,
 } from "@composio/ao-core";
 import { exec } from "../lib/shell.js";
@@ -59,6 +60,21 @@ interface SpawnClaimOptions {
   assignOnGithub?: boolean;
 }
 
+const WORKER_ROLES: readonly WorkerRole[] = ["planner", "executor", "validator", "reproducer"];
+
+function parseWorkerRole(value: string): WorkerRole {
+  const trimmed = value.trim();
+  if (!WORKER_ROLES.includes(trimmed as WorkerRole)) {
+    throw new Error(`Invalid --worker-role "${value}". Use one of: ${WORKER_ROLES.join(", ")}`);
+  }
+  return trimmed as WorkerRole;
+}
+
+interface SpawnSessionOptions extends SpawnClaimOptions {
+  prompt?: string;
+  workerRole?: WorkerRole;
+}
+
 /**
  * Run pre-flight checks for a project once, before any sessions are spawned.
  * Validates runtime and tracker prerequisites so failures surface immediately
@@ -88,7 +104,7 @@ async function spawnSession(
   issueId?: string,
   openTab?: boolean,
   agent?: string,
-  claimOptions?: SpawnClaimOptions,
+  options?: SpawnSessionOptions,
 ): Promise<string> {
   const spinner = ora("Creating session").start();
 
@@ -96,26 +112,31 @@ async function spawnSession(
     const sm = await getSessionManager(config);
     spinner.text = "Spawning session via core";
 
+    const promptArg =
+      options?.prompt !== undefined && options.prompt.trim() !== "" ? options.prompt : undefined;
+
     const session = await sm.spawn({
       projectId,
       issueId,
       agent,
+      ...(promptArg !== undefined ? { prompt: promptArg } : {}),
+      ...(options?.workerRole ? { workerRole: options.workerRole } : {}),
     });
 
     let branchStr = session.branch ?? "";
     let claimedPrUrl: string | null = null;
 
-    if (claimOptions?.claimPr) {
-      spinner.text = `Claiming PR ${claimOptions.claimPr}`;
+    if (options?.claimPr) {
+      spinner.text = `Claiming PR ${options.claimPr}`;
       try {
-        const claimResult = await sm.claimPR(session.id, claimOptions.claimPr, {
-          assignOnGithub: claimOptions.assignOnGithub,
+        const claimResult = await sm.claimPR(session.id, options.claimPr, {
+          assignOnGithub: options.assignOnGithub,
         });
         branchStr = claimResult.pr.branch;
         claimedPrUrl = claimResult.pr.url;
       } catch (err) {
         throw new Error(
-          `Session ${session.id} was created, but failed to claim PR ${claimOptions.claimPr}: ${err instanceof Error ? err.message : String(err)}`,
+          `Session ${session.id} was created, but failed to claim PR ${options.claimPr}: ${err instanceof Error ? err.message : String(err)}`,
           { cause: err },
         );
       }
@@ -159,13 +180,18 @@ export function registerSpawn(program: Command): void {
     .command("spawn")
     .description("Spawn a single agent session")
     .argument("[first]", "Issue identifier (project is auto-detected)")
-    .argument("[second]", "", /* hidden second arg to catch old two-arg usage */)
+    .argument("[second]", "" /* hidden second arg to catch old two-arg usage */)
     .option("--open", "Open session in terminal tab")
     .option("--agent <name>", "Override the agent plugin (e.g. codex, claude-code)")
     .option("--claim-pr <pr>", "Immediately claim an existing PR for the spawned session")
     .option("--assign-on-github", "Assign the claimed PR to the authenticated GitHub user")
     .option("--decompose", "Decompose issue into subtasks before spawning")
     .option("--max-depth <n>", "Max decomposition depth (default: 3)")
+    .option("--prompt <text>", "Additional instructions appended to the agent prompt")
+    .option(
+      "--worker-role <role>",
+      "Worker role (planner | executor | validator | reproducer) for artifact / prompt layers",
+    )
     .action(
       async (
         first: string | undefined,
@@ -177,6 +203,8 @@ export function registerSpawn(program: Command): void {
           assignOnGithub?: boolean;
           decompose?: boolean;
           maxDepth?: string;
+          prompt?: string;
+          workerRole?: string;
         },
       ) => {
         // Catch old two-arg usage: ao spawn <project> <issue>
@@ -224,6 +252,22 @@ export function registerSpawn(program: Command): void {
           assignOnGithub: opts.assignOnGithub,
         };
 
+        let resolvedWorkerRole: WorkerRole | undefined;
+        if (opts.workerRole !== undefined && opts.workerRole !== "") {
+          try {
+            resolvedWorkerRole = parseWorkerRole(opts.workerRole);
+          } catch (err) {
+            console.error(chalk.red(err instanceof Error ? err.message : String(err)));
+            process.exit(1);
+          }
+        }
+
+        const spawnOptions: SpawnSessionOptions = {
+          ...claimOptions,
+          ...(opts.prompt !== undefined && opts.prompt !== "" ? { prompt: opts.prompt } : {}),
+          ...(resolvedWorkerRole ? { workerRole: resolvedWorkerRole } : {}),
+        };
+
         try {
           await runSpawnPreflight(config, projectId, claimOptions);
           await ensureLifecycleWorker(config, projectId);
@@ -252,7 +296,7 @@ export function registerSpawn(program: Command): void {
 
             if (leaves.length <= 1) {
               console.log(chalk.yellow("Task is atomic — spawning directly."));
-              await spawnSession(config, projectId, issueId, opts.open, opts.agent, claimOptions);
+              await spawnSession(config, projectId, issueId, opts.open, opts.agent, spawnOptions);
             } else {
               // Create child issues and spawn sessions with lineage context
               const sm = await getSessionManager(config);
@@ -268,6 +312,8 @@ export function registerSpawn(program: Command): void {
                     lineage: leaf.lineage,
                     siblings,
                     agent: opts.agent,
+                    ...(spawnOptions.prompt ? { prompt: spawnOptions.prompt } : {}),
+                    ...(spawnOptions.workerRole ? { workerRole: spawnOptions.workerRole } : {}),
                   });
                   console.log(`  ${chalk.green("✓")} ${session.id} — ${leaf.description}`);
                 } catch (err) {
@@ -279,7 +325,7 @@ export function registerSpawn(program: Command): void {
               }
             }
           } else {
-            await spawnSession(config, projectId, issueId, opts.open, opts.agent, claimOptions);
+            await spawnSession(config, projectId, issueId, opts.open, opts.agent, spawnOptions);
           }
         } catch (err) {
           console.error(chalk.red(`✗ ${err instanceof Error ? err.message : String(err)}`));
