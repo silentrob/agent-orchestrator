@@ -1,5 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { isOrchestratorSession, isIssueNotFoundError } from "../types.js";
+import {
+  isOrchestratorSession,
+  isIssueNotFoundError,
+  type SessionSpawnConfig,
+  type WorkerRole,
+} from "../types.js";
+
+const WORKER_ROLES: WorkerRole[] = ["planner", "executor", "validator", "reproducer"];
+
+describe("SessionSpawnConfig.workerRole", () => {
+  it("accepts optional workerRole and remains backward compatible without it", () => {
+    const minimal: SessionSpawnConfig = { projectId: "p" };
+    expect(minimal.workerRole).toBeUndefined();
+  });
+
+  it("accepts each WorkerRole literal", () => {
+    for (const role of WORKER_ROLES) {
+      const cfg: SessionSpawnConfig = { projectId: "p", workerRole: role };
+      expect(cfg.workerRole).toBe(role);
+    }
+  });
+});
 
 describe("isOrchestratorSession", () => {
   it("detects orchestrators by explicit role metadata", () => {

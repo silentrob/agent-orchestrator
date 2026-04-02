@@ -196,12 +196,20 @@ export function isOrchestratorSession(session: {
   return session.metadata?.["role"] === "orchestrator" || session.id.endsWith("-orchestrator");
 }
 
+/**
+ * Worker role for role-typed artifacts / prompt layers (planner, executor, validator, reproducer).
+ * Optional on spawn; when omitted, behavior matches pre-role workers.
+ */
+export type WorkerRole = "planner" | "executor" | "validator" | "reproducer";
+
 /** Config for creating a new session */
 export interface SessionSpawnConfig {
   projectId: string;
   issueId?: string;
   branch?: string;
   prompt?: string;
+  /** Role for artifact contract and planner/validator prompt layers (POC). */
+  workerRole?: WorkerRole;
   /** Override the agent plugin for this session (e.g. "codex", "claude-code") */
   agent?: string;
   /** Override the OpenCode subagent for this session (e.g. "sisyphus", "oracle") */
@@ -636,7 +644,10 @@ export interface SCM {
    * @param observer - Optional observer for batch operation metrics
    * @returns Map keyed by "${owner}/${repo}#${number}" containing enrichment data
    */
-  enrichSessionsPRBatch?(prs: PRInfo[], observer?: BatchObserver): Promise<Map<string, PREnrichmentData>>;
+  enrichSessionsPRBatch?(
+    prs: PRInfo[],
+    observer?: BatchObserver,
+  ): Promise<Map<string, PREnrichmentData>>;
 }
 
 // --- PR Types ---
