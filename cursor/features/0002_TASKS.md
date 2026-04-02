@@ -182,13 +182,19 @@ Derived from `0002_PLAN.md` (approved). No scope beyond IN-SCOPE.
 
 - **Priority:** High
 - **Effort:** M
-- **Status:** not started
+- **Status:** complete
 - **Description:** When `session.metadata["workerRole"] === "planner"`, fetch plan API; show body (read-only) and badges for `status`, `requires_approval` if true. Tailwind only; no new UI libraries.
 - **Dependencies:** T09
 - **Files to Change:** `packages/web/src/components/SessionDetail.tsx`; `packages/web/src/components/__tests__/` as needed
 - **Acceptance Criteria:**
   - Component test or manual test checklist: planner shows panel; non-planner unchanged.
   - No `style=` attributes per project rules.
+
+- **Proof of Work:** `SessionDetail.tsx` — `PlannerPlanPanel` + `isRecord` helper; section gated on `metadata["workerRole"] === "planner"`; `GET /api/sessions/[id]/plan` on mount; loading / error / OK states; `<pre>` for body; badges for string `frontmatter.status` and `requires_approval === true` only. New panel uses Tailwind/CSS variables only (no `style=`). Tests: `SessionDetail.planner.test.tsx`.
+- **Acceptance Criteria Check-off:**
+  - ✓ Planner sessions render plan panel + fetch; non-planner sessions omit panel.
+  - ✓ New UI uses no inline `style=` (existing `SessionTopStrip` unchanged).
+- **Test Artifacts:** `SessionDetail.planner.test.tsx` — four tests (omit panel, success + badges, no requires_approval badge, API error).
 
 ---
 

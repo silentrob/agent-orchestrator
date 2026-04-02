@@ -202,6 +202,119 @@ async function askAgentToFix(
   }
 }
 
+type PlannerPlanFetchState =
+  | { kind: "loading" }
+  | { kind: "error"; message: string }
+  | { kind: "ok"; body: string; frontmatter: Record<string, unknown> };
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+/** Read-only plan from `GET /api/sessions/[id]/plan` for planner worker sessions. */
+function PlannerPlanPanel({ sessionId }: { sessionId: string }) {
+  const [state, setState] = useState<PlannerPlanFetchState>({ kind: "loading" });
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      setState({ kind: "loading" });
+      try {
+        const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/plan`);
+        const data: unknown = await res.json();
+        if (cancelled) return;
+        if (!res.ok) {
+          const msg =
+            isRecord(data) && typeof data.error === "string" ? data.error : `HTTP ${res.status}`;
+          setState({ kind: "error", message: msg });
+          return;
+        }
+        if (!isRecord(data) || typeof data.body !== "string" || !isRecord(data.frontmatter)) {
+          setState({ kind: "error", message: "Invalid plan response" });
+          return;
+        }
+        setState({
+          kind: "ok",
+          body: data.body,
+          frontmatter: data.frontmatter,
+        });
+      } catch {
+        if (!cancelled) setState({ kind: "error", message: "Failed to load plan" });
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId]);
+
+  const statusLabel =
+    state.kind === "ok" &&
+    typeof state.frontmatter.status === "string" &&
+    state.frontmatter.status.trim() !== ""
+      ? state.frontmatter.status.trim()
+      : null;
+  const showRequiresApproval = state.kind === "ok" && state.frontmatter.requires_approval === true;
+
+  return (
+    <div data-testid="planner-plan-panel">
+      <div className="mb-3 flex items-center gap-2">
+        <div className="h-3 w-0.5 bg-[var(--color-accent)] opacity-75" aria-hidden="true" />
+        <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-text-tertiary)]">
+          Plan
+        </span>
+      </div>
+
+      {state.kind === "loading" ? (
+        <p className="text-[12px] text-[var(--color-text-tertiary)]">Loading plan…</p>
+      ) : null}
+
+      {state.kind === "error" ? (
+        <p
+          className="text-[12px] text-[var(--color-status-error)]"
+          data-testid="planner-plan-error"
+        >
+          {state.message}
+        </p>
+      ) : null}
+
+      {state.kind === "ok" ? (
+        <>
+          {(statusLabel !== null || showRequiresApproval) && (
+            <div
+              className="mb-3 flex flex-wrap items-center gap-2"
+              data-testid="planner-plan-badges"
+            >
+              {statusLabel !== null ? (
+                <span
+                  className="rounded border border-[var(--color-border-default)] bg-[var(--color-chip-bg)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]"
+                  data-testid="planner-plan-badge-status"
+                >
+                  {statusLabel}
+                </span>
+              ) : null}
+              {showRequiresApproval ? (
+                <span
+                  className="rounded border border-[var(--color-status-attention)] bg-[rgba(210,153,34,0.12)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-status-attention)]"
+                  data-testid="planner-plan-badge-requires-approval"
+                >
+                  Requires approval
+                </span>
+              ) : null}
+            </div>
+          )}
+          <pre
+            className="max-h-[min(420px,50vh)] overflow-auto whitespace-pre-wrap break-words rounded border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)] p-3 font-[var(--font-mono)] text-[12px] leading-relaxed text-[var(--color-text-secondary)]"
+            data-testid="planner-plan-body"
+          >
+            {state.body}
+          </pre>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
 // ── Orchestrator status strip ─────────────────────────────────────────
 
 function OrchestratorStatusStrip({
@@ -344,8 +457,12 @@ export function SessionDetail({
   const reloadCommand = opencodeSessionId
     ? `/exit\nopencode --session ${opencodeSessionId}\n`
     : undefined;
-  const dashboardHref = session.projectId ? `/?project=${encodeURIComponent(session.projectId)}` : "/";
-  const prsHref = session.projectId ? `/prs?project=${encodeURIComponent(session.projectId)}` : "/prs";
+  const dashboardHref = session.projectId
+    ? `/?project=${encodeURIComponent(session.projectId)}`
+    : "/";
+  const prsHref = session.projectId
+    ? `/prs?project=${encodeURIComponent(session.projectId)}`
+    : "/prs";
   const crumbHref = dashboardHref;
   const crumbLabel = isOrchestrator ? "Orchestrator" : "Dashboard";
   const orchestratorHref = useMemo(() => {
@@ -385,6 +502,12 @@ export function SessionDetail({
               mobileSimple={isMobile}
             />
           )}
+
+          {session.metadata["workerRole"] === "planner" ? (
+            <section className="mt-5" aria-label="Planner plan">
+              <PlannerPlanPanel sessionId={session.id} />
+            </section>
+          ) : null}
 
           <section className="mt-5">
             <div id="session-terminal-section" aria-hidden="true" />
