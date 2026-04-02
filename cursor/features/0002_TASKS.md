@@ -145,13 +145,20 @@ Derived from `0002_PLAN.md` (approved). No scope beyond IN-SCOPE.
 
 - **Priority:** High
 - **Effort:** M
-- **Status:** not started
+- **Status:** complete
 - **Description:** Implement PROPOSED helpers: resolved absolute path must stay under `workspacePath` (prefix / realpath check); parse `---` YAML frontmatter + body; invalid YAML yields empty frontmatter or explicit error contract documented in API response.
 - **Dependencies:** none
 - **Files to Change:** `packages/web/src/lib/plan-artifact.ts` (new, suggested); tests under `packages/web/src/lib/__tests__/`
 - **Acceptance Criteria:**
   - Unit tests: traversal `../` rejected; valid frontmatter split; no frontmatter → body = full file.
   - Signatures match plan Delta for `ParsedPlanArtifact` / `parsePlanMarkdown` / `resolvePlanArtifactPath`.
+
+- **Proof of Work:** Added `packages/web/src/lib/plan-artifact.ts` (`ParsedPlanArtifact`, `parsePlanMarkdown`, `resolvePlanArtifactPath`) with simple YAML block parser and realpath-based containment checks. Tests in `packages/web/src/lib/__tests__/plan-artifact.test.ts`.
+- **Acceptance Criteria Check-off:**
+  - ✓ `../` and symlink escape rejected; default `.ao/plan.md` resolves under workspace (realpath-safe assertion).
+  - ✓ Frontmatter/body split; no frontmatter → body = full file; unclosed fence → empty frontmatter + full raw body.
+  - ✓ Signatures match plan Delta.
+- **Test Artifacts:** `plan-artifact.test.ts` — seven tests (parse ×3, resolve ×4).
 
 ### T09 — `GET /api/sessions/[id]/plan`
 
