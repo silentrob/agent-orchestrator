@@ -164,13 +164,19 @@ Derived from `0002_PLAN.md` (approved). No scope beyond IN-SCOPE.
 
 - **Priority:** High
 - **Effort:** M
-- **Status:** not started
+- **Status:** complete
 - **Description:** Read-only route: `get` session; 404 if missing or no `workspacePath`; resolve path via T08; read file with size cap (~256KB per plan); return JSON `{ path, body, frontmatter, issueId }`.
 - **Dependencies:** T08
 - **Files to Change:** `packages/web/src/app/api/sessions/[id]/plan/route.ts` (new); tests
 - **Acceptance Criteria:**
   - 404 for missing session / missing file / path escape.
   - 200 JSON shape matches plan; uses `getServices`, `sessionManager.get`.
+
+- **Proof of Work:** `packages/web/src/app/api/sessions/[id]/plan/route.ts` — `GET` loads session via `getServices` / `sessionManager.get`; 404 for missing session, no `workspacePath`, invalid resolved path, or missing file; capped UTF-8 read (256KB) + `parsePlanMarkdown`; observability `recordApiObservation` + `jsonWithCorrelation`. `resolvePlanArtifactPath` now resolves relative paths from `realpathSync(workspacePath)` so non-existent plan paths under symlinked temp dirs (e.g. macOS `/var` vs `/private/var`) still validate containment. Tests in `packages/web/src/__tests__/api-routes.test.ts`.
+- **Acceptance Criteria Check-off:**
+  - ✓ 404 missing session, no workspace, traversal `../` in metadata, missing file on disk.
+  - ✓ 200 returns `{ path, body, frontmatter, issueId }`; uses `getServices` / `sessionManager.get`.
+- **Test Artifacts:** `api-routes.test.ts` — `GET /api/sessions/[id]/plan` describe (5 tests).
 
 ### T10 — Session detail: planner plan panel
 

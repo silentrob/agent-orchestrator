@@ -31,7 +31,8 @@ export function resolvePlanArtifactPath(
     return null;
   }
 
-  let candidate = resolve(workspacePath, raw);
+  // Resolve from realpathed workspace so containment checks match macOS /tmp → /private/tmp, etc.
+  let candidate = resolve(baseReal, raw);
   if (existsSync(candidate)) {
     try {
       candidate = realpathSync(candidate);

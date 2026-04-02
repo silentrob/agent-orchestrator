@@ -1,5 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   SessionNotFoundError,
   SessionNotRestorableError,
@@ -205,6 +208,7 @@ import { POST as mergePOST } from "@/app/api/prs/[id]/merge/route";
 import { GET as eventsGET } from "@/app/api/events/route";
 import { GET as observabilityGET } from "@/app/api/observability/route";
 import { GET as runtimeTerminalGET } from "@/app/api/runtime/terminal/route";
+import { GET as planGET } from "@/app/api/sessions/[id]/plan/route";
 
 function makeRequest(url: string, init?: RequestInit): NextRequest {
   return new NextRequest(
@@ -417,11 +421,12 @@ describe("API Routes", () => {
         .spyOn(serialize, "enrichSessionsMetadata")
         .mockResolvedValue(undefined);
 
-      const enrichSpy = vi
-        .spyOn(serialize, "enrichSessionPR")
-        .mockImplementation(
-          () => new Promise<void>((resolve) => { setTimeout(resolve, 1_000); }),
-        );
+      const enrichSpy = vi.spyOn(serialize, "enrichSessionPR").mockImplementation(
+        () =>
+          new Promise<void>((resolve) => {
+            setTimeout(resolve, 1_000);
+          }),
+      );
 
       const responsePromise = sessionsGET(makeRequest("http://localhost:3000/api/sessions"));
 
@@ -984,6 +989,105 @@ describe("API Routes", () => {
       expect(data).toHaveProperty("generatedAt");
       expect(data).toHaveProperty("overallStatus");
       expect(data).toHaveProperty("projects");
+    });
+  });
+
+  describe("GET /api/sessions/[id]/plan", () => {
+    let tmpWorkspace: string | undefined;
+
+    afterEach(() => {
+      if (tmpWorkspace) {
+        try {
+          rmSync(tmpWorkspace, { recursive: true, force: true });
+        } catch {
+          /* ignore */
+        }
+        tmpWorkspace = undefined;
+      }
+    });
+
+    it("returns 404 when session is not found", async () => {
+      (mockSessionManager.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
+      const res = await planGET(makeRequest("http://localhost:3000/api/sessions/unknown/plan"), {
+        params: Promise.resolve({ id: "unknown" }),
+      });
+      expect(res.status).toBe(404);
+      const data = await res.json();
+      expect(data.error).toBe("Session not found");
+    });
+
+    it("returns 404 when workspace path is missing", async () => {
+      const res = await planGET(makeRequest("http://localhost:3000/api/sessions/backend-3/plan"), {
+        params: Promise.resolve({ id: "backend-3" }),
+      });
+      expect(res.status).toBe(404);
+      const data = await res.json();
+      expect(data.error).toBe("No workspace path");
+    });
+
+    it("returns 404 for traversal plan path in metadata", async () => {
+      tmpWorkspace = mkdtempSync(join(tmpdir(), "ao-plan-"));
+      mkdirSync(join(tmpWorkspace, ".ao"), { recursive: true });
+      (mockSessionManager.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        makeSession({
+          id: "plan-trav",
+          workspacePath: tmpWorkspace,
+          metadata: { planArtifactRelPath: "../outside.md" },
+        }),
+      );
+      const res = await planGET(makeRequest("http://localhost:3000/api/sessions/plan-trav/plan"), {
+        params: Promise.resolve({ id: "plan-trav" }),
+      });
+      expect(res.status).toBe(404);
+      const data = await res.json();
+      expect(data.error).toBe("Invalid plan path");
+    });
+
+    it("returns 404 when plan file is missing", async () => {
+      tmpWorkspace = mkdtempSync(join(tmpdir(), "ao-plan-"));
+      mkdirSync(tmpWorkspace, { recursive: true });
+      (mockSessionManager.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        makeSession({
+          id: "plan-miss",
+          workspacePath: tmpWorkspace,
+          metadata: { planArtifactRelPath: ".ao/plan.md" },
+        }),
+      );
+      const res = await planGET(makeRequest("http://localhost:3000/api/sessions/plan-miss/plan"), {
+        params: Promise.resolve({ id: "plan-miss" }),
+      });
+      expect(res.status).toBe(404);
+      const data = await res.json();
+      expect(data.error).toBe("Plan file not found");
+    });
+
+    it("returns parsed plan JSON when file exists", async () => {
+      tmpWorkspace = mkdtempSync(join(tmpdir(), "ao-plan-"));
+      const ao = join(tmpWorkspace, ".ao");
+      mkdirSync(ao, { recursive: true });
+      writeFileSync(
+        join(ao, "plan.md"),
+        "---\nstatus: approved\n---\n\n# Title\n\nBody line.\n",
+        "utf8",
+      );
+      (mockSessionManager.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        makeSession({
+          id: "plan-ok",
+          workspacePath: tmpWorkspace,
+          issueId: "ISS-1",
+          metadata: { planArtifactRelPath: ".ao/plan.md" },
+        }),
+      );
+      const res = await planGET(makeRequest("http://localhost:3000/api/sessions/plan-ok/plan"), {
+        params: Promise.resolve({ id: "plan-ok" }),
+      });
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.issueId).toBe("ISS-1");
+      expect(data.body).toContain("# Title");
+      expect(data.frontmatter).toMatchObject({ status: "approved" });
+      expect(typeof data.path).toBe("string");
+      expect(data.path.endsWith("plan.md")).toBe(true);
     });
   });
 });
