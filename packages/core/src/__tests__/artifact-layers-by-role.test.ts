@@ -12,6 +12,19 @@ describe("buildPlannerArtifactLayer", () => {
     expect(text).toMatch(/respawn|already exists|read it first/i);
   });
 
+  it("aligns with feature_plan-style GUARDRAILS, SCOPE, and Delta rules", () => {
+    const text = buildPlannerArtifactLayer({ projectId: "my-app" });
+    expect(text).toMatch(/GLOBAL GUARDRAILS/i);
+    expect(text).toMatch(/API-TRUTH|API Contract Table/i);
+    expect(text).toMatch(/NO-INVENTION|Delta Proposal/i);
+    expect(text).toMatch(/SCOPE FENCE|IN-SCOPE|OUT-OF-SCOPE/i);
+    expect(text).toMatch(/VERIFICATION HOOKS|Reference Proof/i);
+    expect(text).toMatch(/ACCEPTANCE INTEGRITY/i);
+    expect(text).toMatch(/HARD GATE/i);
+    expect(text).toMatch(/PLANNING STEPS|Clarifying Questions/i);
+    expect(text).toMatch(/feature_plan/i);
+  });
+
   it("includes issue id and project id when provided", () => {
     const text = buildPlannerArtifactLayer({ projectId: "p1", issueId: "GH-7" });
     expect(text).toContain("GH-7");
