@@ -1,15 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import {
-  mkdirSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createSessionManager } from "../../session-manager.js";
-import {
-  writeMetadata,
-  readMetadataRaw,
-  deleteMetadata,
-} from "../../metadata.js";
+import { writeMetadata, readMetadataRaw, deleteMetadata } from "../../metadata.js";
 import {
   SessionNotRestorableError,
   WorkspaceMissingError,
@@ -19,7 +12,12 @@ import {
   type Agent,
   type Workspace,
 } from "../../types.js";
-import { setupTestContext, teardownTestContext, makeHandle, type TestContext } from "../test-utils.js";
+import {
+  setupTestContext,
+  teardownTestContext,
+  makeHandle,
+  type TestContext,
+} from "../test-utils.js";
 import { installMockOpencode } from "./opencode-helpers.js";
 
 let ctx: TestContext;
@@ -34,7 +32,16 @@ let originalPath: string | undefined;
 
 beforeEach(() => {
   ctx = setupTestContext();
-  ({ tmpDir, sessionsDir, mockRuntime, mockAgent, mockWorkspace, mockRegistry, config, originalPath } = ctx);
+  ({
+    tmpDir,
+    sessionsDir,
+    mockRuntime,
+    mockAgent,
+    mockWorkspace,
+    mockRegistry,
+    config,
+    originalPath,
+  } = ctx);
 });
 
 afterEach(() => {
@@ -282,6 +289,44 @@ describe("restore", () => {
     const restored = await sm.restore("app-1");
 
     expect(restored.branch).toBe("feat/latest");
+  });
+
+  it("preserves extension metadata keys when restoring from archive (planner POC 0002)", async () => {
+    const wsPath = join(tmpDir, "ws-planner-arch");
+    mkdirSync(wsPath, { recursive: true });
+
+    const archiveDir = join(sessionsDir, "archive");
+    mkdirSync(archiveDir, { recursive: true });
+
+    writeFileSync(
+      join(archiveDir, "planner-arch-1_2025-06-15T12-00-00-000Z"),
+      [
+        `worktree=${wsPath}`,
+        "branch=feat/plan",
+        "status=killed",
+        "project=my-app",
+        "issue=INT-42",
+        `runtimeHandle=${JSON.stringify(makeHandle("rt-old"))}`,
+        "workerRole=planner",
+        "planArtifactRelPath=.ao/plan.md",
+        "planArtifactIssue=INT-42",
+        "",
+      ].join("\n"),
+    );
+
+    const sm = createSessionManager({ config, registry: mockRegistry });
+    await sm.restore("planner-arch-1");
+
+    const meta = readMetadataRaw(sessionsDir, "planner-arch-1");
+    expect(meta).not.toBeNull();
+    expect(meta!["workerRole"]).toBe("planner");
+    expect(meta!["planArtifactRelPath"]).toBe(".ao/plan.md");
+    expect(meta!["planArtifactIssue"]).toBe("INT-42");
+
+    const got = await sm.get("planner-arch-1");
+    expect(got?.metadata["workerRole"]).toBe("planner");
+    expect(got?.metadata["planArtifactRelPath"]).toBe(".ao/plan.md");
+    expect(got?.metadata["planArtifactIssue"]).toBe("INT-42");
   });
 
   it("throws for nonexistent session (not in active or archive)", async () => {

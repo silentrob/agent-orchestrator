@@ -91,13 +91,21 @@ Derived from `0002_PLAN.md` (approved). No scope beyond IN-SCOPE.
 
 - **Priority:** Medium
 - **Effort:** S
-- **Status:** not started
+- **Status:** complete
 - **Description:** Audit `SessionManager.restore` / metadata hydration so `workerRole`, `planArtifactRelPath`, `planArtifactIssue` remain available on `Session.get` after restore. Fix only if gap found.
 - **Dependencies:** T03
 - **Files to Change:** `packages/core/src/session-manager.ts` (only if audit finds gap); tests
 - **Acceptance Criteria:**
   - Documented audit outcome in PR or task comment.
   - If gap: restored planner session exposes same metadata keys for web plan API.
+
+- **Proof of Work / audit outcome:**
+  - **Active metadata restore:** `readMetadataRaw` → `metadataToSession` sets `session.metadata` to the full raw record; step 9 `updateMetadata` merges deltas only — **no gap**; planner keys remain on disk and on `get()`.
+  - **Archive restore:** `writeMetadata` rewrote the active file using only typed `SessionMetadata` fields, **dropping** extension keys (e.g. `workerRole`, `planArtifactRelPath`, `planArtifactIssue`). **Fix:** after archive `writeMetadata`, merge back keys from archived `raw` not in `WRITE_METADATA_FILE_KEYS` via `extraMetadataKeysFromRaw` + `updateMetadata`.
+- **Acceptance Criteria Check-off:**
+  - ✓ Audit documented above.
+  - ✓ Gap closed: post–archive-restore disk + `sessionManager.get` retain planner extension keys.
+- **Test Artifacts:** `restore.test.ts` — `preserves extension metadata keys when restoring from archive (planner POC 0002)`.
 
 ### T05 — Orchestrator prompt: Planner workflow (POC)
 

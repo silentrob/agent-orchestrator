@@ -80,6 +80,42 @@ const execFileAsync = promisify(execFile);
 const OPENCODE_DISCOVERY_TIMEOUT_MS = 10_000;
 const OPENCODE_INTERACTIVE_DISCOVERY_TIMEOUT_MS = 10_000;
 
+/**
+ * Keys emitted by {@link writeMetadata} only. Archive restore rewrites the active file via
+ * `writeMetadata` (typed SessionMetadata); any other keys from archived raw must be merged back
+ * so extensions (e.g. planner POC: workerRole, planArtifactRelPath) survive for `get` / web API.
+ */
+const WRITE_METADATA_FILE_KEYS = new Set<string>([
+  "worktree",
+  "branch",
+  "status",
+  "tmuxName",
+  "issue",
+  "pr",
+  "prAutoDetect",
+  "summary",
+  "project",
+  "agent",
+  "createdAt",
+  "runtimeHandle",
+  "restoredAt",
+  "role",
+  "dashboardPort",
+  "terminalWsPort",
+  "directTerminalWsPort",
+  "opencodeSessionId",
+]);
+
+function extraMetadataKeysFromRaw(raw: Record<string, string>): Record<string, string> {
+  const extras: Record<string, string> = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (WRITE_METADATA_FILE_KEYS.has(key)) continue;
+    if (value === "") continue;
+    extras[key] = value;
+  }
+  return extras;
+}
+
 function errorIncludesSessionNotFound(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
   const e = err as Error & { stderr?: string; stdout?: string };
@@ -2309,6 +2345,10 @@ export function createSessionManager(deps: SessionManagerDeps): OpenCodeSessionM
         runtimeHandle: raw["runtimeHandle"],
         opencodeSessionId: raw["opencodeSessionId"],
       });
+      const extras = extraMetadataKeysFromRaw(raw);
+      if (Object.keys(extras).length > 0) {
+        updateMetadata(sessionsDir, sessionId, extras);
+      }
     }
 
     // 4. Validate required plugins (plugins already resolved above for enrichment)
