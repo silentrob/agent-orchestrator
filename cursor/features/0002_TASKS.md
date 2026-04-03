@@ -147,13 +147,19 @@ Derived from `0002_PLAN.md` (approved). No scope beyond IN-SCOPE.
 
 - **Priority:** Medium
 - **Effort:** S
-- **Status:** not started
+- **Status:** complete
 - **Description:** Extend JSON body validation to accept optional `prompt` and `workerRole`; pass through to `sessionManager.spawn`.
 - **Dependencies:** T01
 - **Files to Change:** `packages/web/src/app/api/spawn/route.ts`; `packages/web/src/__tests__/api-routes.test.ts` or equivalent
 - **Acceptance Criteria:**
   - Valid body spawns with forwarded fields; invalid `workerRole` returns 400.
   - Uses `getServices`, `sessionManager.spawn` (API table).
+
+- **Proof of Work:** `spawn/route.ts` — optional `prompt` (string, max 200k chars) and `workerRole` (trimmed; must match `WorkerRole` union); 400 on bad types/values; `sessionManager.spawn({ projectId, issueId, prompt?, workerRole? })`. Tests in `api-routes.test.ts`.
+- **Acceptance Criteria Check-off:**
+  - ✓ Forwarding + invalid `workerRole` → 400; invalid `prompt` type → 400.
+  - ✓ Unchanged `getServices` / `sessionManager.spawn` usage.
+- **Test Artifacts:** `api-routes.test.ts` — `forwards prompt and workerRole to sessionManager.spawn`, `returns 400 for invalid workerRole`, `returns 400 when prompt is not a string`.
 
 ### T08 — `resolvePlanArtifactPath` + `parsePlanMarkdown`
 

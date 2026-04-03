@@ -1,8 +1,12 @@
 import { type NextRequest } from "next/server";
+import type { WorkerRole } from "@composio/ao-core";
 import { validateIdentifier, validateConfiguredProject } from "@/lib/validation";
 import { getServices } from "@/lib/services";
 import { sessionToDashboard } from "@/lib/serialize";
 import { getCorrelationId, jsonWithCorrelation, recordApiObservation } from "@/lib/observability";
+
+const WORKER_ROLES: readonly WorkerRole[] = ["planner", "executor", "validator", "reproducer"];
+const MAX_SPAWN_PROMPT_CHARS = 200_000;
 
 /** POST /api/spawn — Spawn a new session */
 export async function POST(request: NextRequest) {
@@ -22,6 +26,47 @@ export async function POST(request: NextRequest) {
     const issueErr = validateIdentifier(body.issueId, "issueId");
     if (issueErr) {
       return jsonWithCorrelation({ error: issueErr }, { status: 400 }, correlationId);
+    }
+  }
+
+  let prompt: string | undefined;
+  if (body.prompt !== undefined && body.prompt !== null) {
+    if (typeof body.prompt !== "string") {
+      return jsonWithCorrelation(
+        { error: "prompt must be a string" },
+        { status: 400 },
+        correlationId,
+      );
+    }
+    if (body.prompt.length > MAX_SPAWN_PROMPT_CHARS) {
+      return jsonWithCorrelation(
+        { error: `prompt must be at most ${MAX_SPAWN_PROMPT_CHARS} characters` },
+        { status: 400 },
+        correlationId,
+      );
+    }
+    prompt = body.prompt;
+  }
+
+  let workerRole: WorkerRole | undefined;
+  if (body.workerRole !== undefined && body.workerRole !== null) {
+    if (typeof body.workerRole !== "string") {
+      return jsonWithCorrelation(
+        { error: "workerRole must be a string" },
+        { status: 400 },
+        correlationId,
+      );
+    }
+    const trimmed = body.workerRole.trim();
+    if (trimmed !== "" && !WORKER_ROLES.includes(trimmed as WorkerRole)) {
+      return jsonWithCorrelation(
+        { error: `Invalid workerRole. Use one of: ${WORKER_ROLES.join(", ")}` },
+        { status: 400 },
+        correlationId,
+      );
+    }
+    if (trimmed !== "") {
+      workerRole = trimmed as WorkerRole;
     }
   }
 
@@ -48,6 +93,8 @@ export async function POST(request: NextRequest) {
     const session = await sessionManager.spawn({
       projectId,
       issueId: (body.issueId as string) ?? undefined,
+      ...(prompt !== undefined ? { prompt } : {}),
+      ...(workerRole !== undefined ? { workerRole } : {}),
     });
 
     recordApiObservation({

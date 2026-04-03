@@ -600,6 +600,59 @@ describe("API Routes", () => {
       const data = await res.json();
       expect(data.session.issueId).toBeNull();
     });
+
+    it("forwards prompt and workerRole to sessionManager.spawn", async () => {
+      const req = makeRequest("/api/spawn", {
+        method: "POST",
+        body: JSON.stringify({
+          projectId: "my-app",
+          issueId: "INT-200",
+          prompt: "Plan the auth flow.",
+          workerRole: "planner",
+        }),
+        headers: { "Content-Type": "application/json" },
+      });
+      const res = await spawnPOST(req);
+      expect(res.status).toBe(201);
+      expect(mockSessionManager.spawn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          projectId: "my-app",
+          issueId: "INT-200",
+          prompt: "Plan the auth flow.",
+          workerRole: "planner",
+        }),
+      );
+    });
+
+    it("returns 400 for invalid workerRole", async () => {
+      const req = makeRequest("/api/spawn", {
+        method: "POST",
+        body: JSON.stringify({
+          projectId: "my-app",
+          workerRole: "not-a-role",
+        }),
+        headers: { "Content-Type": "application/json" },
+      });
+      const res = await spawnPOST(req);
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toMatch(/Invalid workerRole/);
+      expect(mockSessionManager.spawn).not.toHaveBeenCalled();
+    });
+
+    it("returns 400 when prompt is not a string", async () => {
+      const req = makeRequest("/api/spawn", {
+        method: "POST",
+        body: JSON.stringify({
+          projectId: "my-app",
+          prompt: 123,
+        }),
+        headers: { "Content-Type": "application/json" },
+      });
+      const res = await spawnPOST(req);
+      expect(res.status).toBe(400);
+      expect(mockSessionManager.spawn).not.toHaveBeenCalled();
+    });
   });
 
   describe("POST /api/orchestrators", () => {
