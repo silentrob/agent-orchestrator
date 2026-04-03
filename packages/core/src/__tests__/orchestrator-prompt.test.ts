@@ -66,4 +66,20 @@ describe("generateOrchestratorPrompt", () => {
     expect(prompt).toContain("Never claim a PR into `app-orchestrator`");
     expect(prompt).toContain("Delegate implementation, test execution, or PR claiming");
   });
+
+  it("documents planner POC: spawn flags, plan path, frontmatter, recovery", () => {
+    const prompt = generateOrchestratorPrompt({
+      config,
+      projectId: "my-app",
+      project: config.projects["my-app"]!,
+    });
+
+    expect(prompt).toContain("## Planner workflow (POC)");
+    expect(prompt).toContain("--worker-role planner");
+    expect(prompt).toContain("--prompt");
+    expect(prompt).toContain(".ao/plan.md");
+    expect(prompt).toContain("requires_approval");
+    expect(prompt).toContain("defaults to false");
+    expect(prompt).toContain("ao session restore");
+  });
 });

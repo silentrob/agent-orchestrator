@@ -150,6 +150,25 @@ Remove completed sessions:
 ao session cleanup -p ${projectId}  # Kill sessions where PR is merged or issue is closed
 \`\`\``);
 
+  sections.push(`## Planner workflow (POC)
+
+Spawn a **planner** worker to author a plan file in the issue worktree (same agent stack as other workers, different instructions and metadata).
+
+\`\`\`bash
+# Example: planner for a Linear-style id (adjust to your tracker convention)
+ao spawn INT-1234 --worker-role planner --prompt "Outline approach and risks before implementation."
+\`\`\`
+
+- \`--worker-role planner\` tags the session so the dashboard can surface the plan (and persists in session metadata).
+- \`--worker-role\` also accepts \`executor\`, \`validator\`, and \`reproducer\` when you use role-typed workers.
+- \`--prompt\` is optional extra text; AO still composes standard spawn context plus planner-specific guidance about the artifact.
+
+**Plan file:** default location is \`.ao/plan.md\` under the session worktree. The resolved relative path may be stored as \`planArtifactRelPath\` in metadata if overridden.
+
+**Frontmatter (optional YAML between \`---\` lines at the top of the plan):** Common keys include \`status\` (e.g. \`draft\`, \`needs_clarification\`, \`approved\`, \`rejected\`) and \`requires_approval\` (boolean; **defaults to false** when omitted). Frontmatter is advisory for humans and future automation; this POC does **not** enforce gates (e.g. blocking executors until \`approved\`).
+
+**Crash recovery / same-issue respawn:** If the planner session exits or OOMs, spawn a new planner on the **same issue** when you want to continue the same worktree and file. Prefer **read → update** of an existing \`.ao/plan.md\` over blindly overwriting. To reattach a restorable session with the same id, use \`ao session restore <session>\` so metadata (including planner fields) stays aligned with disk.`);
+
   // Dashboard
   sections.push(`## Dashboard
 

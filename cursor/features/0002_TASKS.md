@@ -111,13 +111,19 @@ Derived from `0002_PLAN.md` (approved). No scope beyond IN-SCOPE.
 
 - **Priority:** Medium
 - **Effort:** S
-- **Status:** not started
+- **Status:** complete
 - **Description:** Extend `generateOrchestratorPrompt` with subsection documenting `ao spawn` flags for planner, `.ao/plan.md` location, frontmatter meaning, crash recovery / same-issue respawn.
 - **Dependencies:** T06 (so documented CLI flags match implementation)
 - **Files to Change:** `packages/core/src/orchestrator-prompt.ts`; `packages/core/src/__tests__/` if present for orchestrator prompt
 - **Acceptance Criteria:**
   - New section present in generated string.
   - Uses only `generateOrchestratorPrompt` / `OrchestratorPromptConfig` (API table).
+
+- **Proof of Work:** `orchestrator-prompt.ts` — new markdown section `## Planner workflow (POC)` after Session Management: example `ao spawn … --worker-role planner --prompt`, other roles named, `.ao/plan.md` / `planArtifactRelPath`, frontmatter (`status`, `requires_approval` default false, no enforcement note), same-issue respawn + `ao session restore`.
+- **Acceptance Criteria Check-off:**
+  - ✓ Section present in `generateOrchestratorPrompt` output.
+  - ✓ Only `generateOrchestratorPrompt` / `OrchestratorPromptConfig` surface extended (string content).
+- **Test Artifacts:** `orchestrator-prompt.test.ts` — `documents planner POC: spawn flags, plan path, frontmatter, recovery`.
 
 ### T06 — CLI: `--prompt` and `--worker-role`
 
