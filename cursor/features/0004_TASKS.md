@@ -83,13 +83,19 @@ Derived from `0004_PLAN.md` (approved). No scope beyond IN-SCOPE.
 
 - **Priority:** High
 - **Effort:** S
-- **Status:** `not started`
+- **Status:** `complete`
 - **Description:** Resolve or narrow §8 items: same-worktree / phase transition vs separate sessions; default spawn role; reproducer policy — aligned with 0004 issue-centric model. If `docs/specs/role-typed-artifacts.md` is missing from the tree, add it with full prior content **or** minimal structure plus §8 + pointer to `issue-lifecycle-trust-vector.md` (maintainer choice).
 - **Dependencies:** T02
 - **Files to Change:** `docs/specs/role-typed-artifacts.md` (create or update)
 - **Acceptance Criteria:**
   - §8 no longer leaves “same worktree” fully open without a documented stance
   - Cross-link to `issue-lifecycle-trust-vector.md`
+
+**Proof of Work:** `docs/specs/role-typed-artifacts.md` — new file (not on `main`); §§1–7 restored from prior spec draft; **§8** retitled **“Resolved positions (0004 alignment)”** with subsections 8.1–8.6 (default role, role switch, same worktree, reproducer policy, trust gates `issue_reproduced` / `validation_signoff`, failing-test paths); links to `./issue-lifecycle-trust-vector.md`.
+
+**Acceptance Criteria Check-off:** ✓ same-worktree / phase vs separate sessions documented (§8.2–8.3); ✓ cross-links to `issue-lifecycle-trust-vector.md` (§6, §8.5, Related).
+
+**Test Artifacts:** N/A (markdown).
 
 ---
 
