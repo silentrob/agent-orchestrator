@@ -139,7 +139,7 @@ Derived from [`0007_PLAN.md`](./0007_PLAN.md). **MVP:** approve plan frontmatter
 
 - **Priority:** High
 - **Effort:** S
-- **Status:** `not started`
+- **Status:** `complete`
 - **Description:** In `SessionDetail.tsx` `PlannerPlanPanel`, when `showRequiresApproval` is true and `statusLabel` is not `approved` (case-insensitive), show primary **Approve plan** button; on success `POST` approve route then refetch GET plan or update state. Tailwind-only; `data-testid` for tests.
 - **Dependencies:** T04
 - **Files to Change:** `packages/web/src/components/SessionDetail.tsx`; `packages/web/src/components/__tests__/SessionDetail.planner.test.tsx` or new test file
@@ -149,6 +149,13 @@ Derived from [`0007_PLAN.md`](./0007_PLAN.md). **MVP:** approve plan frontmatter
   - `pnpm --filter @composio/ao-web test` passes
 
 **API entries used:** existing GET plan + new POST approve (T04).
+
+- **Proof of work:** `PlannerPlanPanel` — `refreshKey` refetch loop, `handleApprovePlan` POST `/plan/approve` then increment refresh; `showApproveButton` = `requires_approval` and status not `approved` (case-insensitive); accent primary button, `planner-plan-approve-button` / `planner-plan-approve-error`; optional inline approve error.
+- **Acceptance Criteria Check-off:**
+  - ✓ Button only when `requires_approval` and status ≠ approved (incl. case); hidden when already approved with `requires_approval` true
+  - ✓ Success path refetches GET plan (test mocks POST + second GET; badge/body update)
+  - ✓ `pnpm --filter @composio/ao-web test` passes
+- **Test Artifacts:** `SessionDetail.planner.test.tsx` — extended planner tests + approve flow.
 
 ---
 

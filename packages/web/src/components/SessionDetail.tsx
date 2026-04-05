@@ -229,6 +229,9 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 /** Read-only plan from `GET /api/sessions/[id]/plan` for planner worker sessions. */
 function PlannerPlanPanel({ sessionId }: { sessionId: string }) {
   const [state, setState] = useState<PlannerPlanFetchState>({ kind: "loading" });
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [approveBusy, setApproveBusy] = useState(false);
+  const [approveError, setApproveError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -248,6 +251,7 @@ function PlannerPlanPanel({ sessionId }: { sessionId: string }) {
           setState({ kind: "error", message: "Invalid plan response" });
           return;
         }
+        setApproveError(null);
         setState({
           kind: "ok",
           body: data.body,
@@ -261,7 +265,7 @@ function PlannerPlanPanel({ sessionId }: { sessionId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [sessionId]);
+  }, [sessionId, refreshKey]);
 
   const statusLabel =
     state.kind === "ok" &&
@@ -270,6 +274,30 @@ function PlannerPlanPanel({ sessionId }: { sessionId: string }) {
       ? state.frontmatter.status.trim()
       : null;
   const showRequiresApproval = state.kind === "ok" && state.frontmatter.requires_approval === true;
+  const showApproveButton =
+    showRequiresApproval && (statusLabel === null || statusLabel.toLowerCase() !== "approved");
+
+  async function handleApprovePlan(): Promise<void> {
+    setApproveError(null);
+    setApproveBusy(true);
+    try {
+      const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/plan/approve`, {
+        method: "POST",
+      });
+      const data: unknown = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg =
+          isRecord(data) && typeof data.error === "string" ? data.error : `HTTP ${res.status}`;
+        setApproveError(msg);
+        return;
+      }
+      setRefreshKey((k) => k + 1);
+    } catch {
+      setApproveError("Failed to approve plan");
+    } finally {
+      setApproveBusy(false);
+    }
+  }
 
   return (
     <div data-testid="planner-plan-panel">
@@ -318,6 +346,27 @@ function PlannerPlanPanel({ sessionId }: { sessionId: string }) {
               ) : null}
             </div>
           )}
+          {showApproveButton ? (
+            <div className="mb-3" data-testid="planner-plan-approve-wrap">
+              <button
+                type="button"
+                data-testid="planner-plan-approve-button"
+                disabled={approveBusy}
+                onClick={() => void handleApprovePlan()}
+                className="rounded px-3 py-1.5 text-[11px] font-semibold bg-[var(--color-accent)] text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {approveBusy ? "Approving…" : "Approve plan"}
+              </button>
+              {approveError ? (
+                <p
+                  className="mt-1.5 text-[11px] text-[var(--color-status-error)]"
+                  data-testid="planner-plan-approve-error"
+                >
+                  {approveError}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
           <pre
             className="max-h-[min(420px,50vh)] overflow-auto whitespace-pre-wrap break-words rounded border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)] p-3 font-[var(--font-mono)] text-[12px] leading-relaxed text-[var(--color-text-secondary)]"
             data-testid="planner-plan-body"
