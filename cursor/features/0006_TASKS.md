@@ -188,7 +188,7 @@ Derived from [`0006_PLAN.md`](./0006_PLAN.md). **Data layer:** **Option A** — 
 
 - **Priority:** Medium
 - **Effort:** S
-- **Status:** `not started`
+- **Status:** `complete`
 - **Description:** When session metadata contains keys matching `TRUST_GATE_SATISFACTION_PREFIX` / `trustGateMetadataKey` pattern, show compact **gates** column or dim suffix (e.g. satisfied gates count or first pending). Reuse `padCol` / width constraints from Phase column.
 - **Dependencies:** T01
 - **Files to Change:** `packages/cli/src/commands/status.ts`; `packages/cli/__tests__/commands/status.test.ts`
@@ -198,6 +198,12 @@ Derived from [`0006_PLAN.md`](./0006_PLAN.md). **Data layer:** **Option A** — 
   - `pnpm --filter @composio/ao-cli test` or root test scope passes for CLI
 
 **API entries used:** `registerStatus` path only; metadata shape as flat strings.
+
+**Proof of Work:** `status.ts` — `extractTrustGateEntries`, `formatTrustGateSummary`, `SessionInfo.trustGates` / `trustGateSummary`, **Gates** column + orchestrator `gates …` dim suffix; JSON includes `trustGates` + `trustGateSummary`.
+
+**Acceptance Criteria Check-off:** ✓ table + JSON; ✓ CLI tests pass.
+
+**Test Artifacts:** `status.test.ts` — Gates column / summary; JSON `trustGates` + `trustGateSummary`; header lists `Gates`.
 
 ---
 

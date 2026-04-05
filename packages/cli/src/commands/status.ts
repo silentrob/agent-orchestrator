@@ -15,6 +15,7 @@ import {
   ISSUE_WORKFLOW_PHASE_METADATA_KEY,
   isOrchestratorSession,
   loadConfig,
+  TRUST_GATE_SATISFACTION_PREFIX,
 } from "@composio/ao-core";
 import { git, getTmuxSessions, getTmuxActivity } from "../lib/shell.js";
 import {
@@ -47,6 +48,10 @@ interface SessionInfo {
   activity: ActivityState | null;
   /** Validated from `issueWorkflowPhase` metadata (0005); null if absent or unknown. */
   issueWorkflowPhase: IssueWorkflowPhase | null;
+  /** Keys with prefix `trustGate*` from session metadata (0006). */
+  trustGates: Record<string, string>;
+  /** Compact gates summary for the table, or null when no trust gate keys. */
+  trustGateSummary: string | null;
 }
 
 interface StatusOptions {
@@ -67,6 +72,51 @@ function parseIssueWorkflowPhaseFromMetadata(
   return (ISSUE_WORKFLOW_PHASES as readonly string[]).includes(v)
     ? (v as IssueWorkflowPhase)
     : null;
+}
+
+/** Collect `trustGate*` satisfaction entries from flat session metadata. */
+function extractTrustGateEntries(metadata: Record<string, string>): Record<string, string> {
+  const prefix = TRUST_GATE_SATISFACTION_PREFIX;
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(metadata)) {
+    if (k.startsWith(prefix) && k.length > prefix.length && typeof v === "string") {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
+/** Short label for display: `trustGateCiPassing` → `ciPassing`. */
+function trustGateKeyDisplayName(key: string): string {
+  const prefix = TRUST_GATE_SATISFACTION_PREFIX;
+  if (!key.startsWith(prefix)) return key;
+  const rest = key.slice(prefix.length);
+  return rest.charAt(0).toLowerCase() + rest.slice(1);
+}
+
+/**
+ * Compact summary: satisfied count, first pending gate short name, failed count.
+ * Fits the CLI gates column (see COL.gates).
+ */
+function formatTrustGateSummary(gates: Record<string, string>): string | null {
+  const entries = Object.entries(gates);
+  if (entries.length === 0) return null;
+
+  const norm = (s: string) => s.trim().toLowerCase();
+  const satisfied = entries.filter(([, v]) => norm(v) === "satisfied").length;
+  const pendingEntries = entries.filter(([, v]) => norm(v) === "pending");
+  const failed = entries.filter(([, v]) => norm(v) === "failed").length;
+
+  const parts: string[] = [];
+  if (satisfied > 0) parts.push(`${satisfied}✓`);
+  if (pendingEntries.length > 0) {
+    const label = trustGateKeyDisplayName(pendingEntries[0][0]);
+    const short = label.length > 9 ? `${label.slice(0, 8)}…` : label;
+    parts.push(pendingEntries.length === 1 ? `${short}:p` : `${pendingEntries.length}p`);
+  }
+  if (failed > 0) parts.push(`${failed}✗`);
+
+  return parts.length > 0 ? parts.join(" ") : "?";
 }
 
 function parseWatchIntervalSeconds(value?: string): number {
@@ -94,6 +144,8 @@ async function gatherSessionInfo(
   let branch = session.branch;
   const status = session.status;
   const issueWorkflowPhase = parseIssueWorkflowPhaseFromMetadata(session.metadata);
+  const trustGates = extractTrustGateEntries(session.metadata);
+  const trustGateSummary = formatTrustGateSummary(trustGates);
   const summary = session.metadata["summary"] ?? null;
   const prUrl = suppressPROwnership ? null : (session.metadata["pr"] ?? null);
   const issue = session.issueId;
@@ -176,6 +228,8 @@ async function gatherSessionInfo(
     pendingThreads,
     activity,
     issueWorkflowPhase,
+    trustGates,
+    trustGateSummary,
   };
 }
 
@@ -183,6 +237,7 @@ async function gatherSessionInfo(
 const COL = {
   session: 14,
   phase: 10,
+  gates: 14,
   branch: 24,
   pr: 6,
   ci: 6,
@@ -196,6 +251,7 @@ function printTableHeader(): void {
   const hdr =
     padCol("Session", COL.session) +
     padCol("Phase", COL.phase) +
+    padCol("Gates", COL.gates) +
     padCol("Branch", COL.branch) +
     padCol("PR", COL.pr) +
     padCol("CI", COL.ci) +
@@ -207,6 +263,7 @@ function printTableHeader(): void {
   const totalWidth =
     COL.session +
     COL.phase +
+    COL.gates +
     COL.branch +
     COL.pr +
     COL.ci +
@@ -225,6 +282,10 @@ function printSessionRow(info: SessionInfo): void {
     padCol(
       info.issueWorkflowPhase ? chalk.dim(info.issueWorkflowPhase) : chalk.dim("-"),
       COL.phase,
+    ) +
+    padCol(
+      info.trustGateSummary ? chalk.dim(info.trustGateSummary) : chalk.dim("-"),
+      COL.gates,
     ) +
     padCol(info.branch ? chalk.cyan(info.branch) : chalk.dim("-"), COL.branch) +
     padCol(info.prNumber ? chalk.blue(prStr) : chalk.dim(prStr), COL.pr) +
@@ -255,8 +316,12 @@ function printOrchestratorRow(info: SessionInfo): void {
     info.issueWorkflowPhase !== null
       ? `${chalk.dim(" · ")}${chalk.dim(info.issueWorkflowPhase)}`
       : "";
+  const gatesBit =
+    info.trustGateSummary !== null
+      ? `${chalk.dim(" · ")}${chalk.dim(`gates ${info.trustGateSummary}`)}`
+      : "";
   console.log(
-    `  ${chalk.magenta("Orchestrator:")} ${chalk.green(info.name)}${phaseBit} ${chalk.dim("(")}${lastActivity}${chalk.dim(")")}`,
+    `  ${chalk.magenta("Orchestrator:")} ${chalk.green(info.name)}${phaseBit}${gatesBit} ${chalk.dim("(")}${lastActivity}${chalk.dim(")")}`,
   );
   const displaySummary = info.claudeSummary || info.summary;
   if (displaySummary) {

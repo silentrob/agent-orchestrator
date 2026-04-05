@@ -446,6 +446,7 @@ describe("status command", () => {
 
     const output = consoleSpy.mock.calls.map((c) => c[0]).join("\n");
     expect(output).toContain("Session");
+    expect(output).toContain("Gates");
     expect(output).toContain("Branch");
     expect(output).toContain("PR");
     expect(output).toContain("CI");
@@ -563,6 +564,32 @@ describe("status command", () => {
     expect(output).toContain("feat/err");
   });
 
+  it("shows trust gate summary in the Gates column when metadata has trustGate keys", async () => {
+    writeFileSync(
+      join(sessionsDir, "app-1"),
+      [
+        "branch=main",
+        "status=idle",
+        "trustGateCiPassing=satisfied",
+        "trustGateHumanPlanApproval=pending",
+      ].join("\n"),
+    );
+
+    mockTmux.mockImplementation(async (...args: string[]) => {
+      if (args[0] === "list-sessions") return "app-1";
+      if (args[0] === "display-message") return null;
+      return null;
+    });
+    mockGit.mockResolvedValue(null);
+
+    await program.parseAsync(["node", "test", "status"]);
+
+    const output = consoleSpy.mock.calls.map((c) => c[0]).join("\n");
+    expect(output).toContain("Gates");
+    expect(output).toContain("1✓");
+    expect(output).toContain(":p");
+  });
+
   it("outputs JSON with enriched fields", async () => {
     writeFileSync(
       join(sessionsDir, "app-1"),
@@ -600,6 +627,37 @@ describe("status command", () => {
     expect(parsed[0].reviewDecision).toBe("pending");
     expect(parsed[0].pendingThreads).toBe(0);
     expect(parsed[0].issueWorkflowPhase).toBe("execute");
+  });
+
+  it("outputs JSON trustGates and trustGateSummary when metadata has trustGate keys", async () => {
+    writeFileSync(
+      join(sessionsDir, "app-1"),
+      [
+        "worktree=/tmp/wt",
+        "branch=feat/gates-json",
+        "status=working",
+        "trustGateCiPassing=satisfied",
+        "trustGateArtifactPlanPresent=pending",
+      ].join("\n"),
+    );
+
+    mockTmux.mockImplementation(async (...args: string[]) => {
+      if (args[0] === "list-sessions") return "app-1";
+      if (args[0] === "display-message") return String(Math.floor(Date.now() / 1000));
+      return null;
+    });
+    mockGit.mockResolvedValue("feat/gates-json");
+
+    await program.parseAsync(["node", "test", "status", "--json"]);
+
+    const jsonCalls = consoleSpy.mock.calls.map((c) => c[0]).join("");
+    const parsed = JSON.parse(jsonCalls);
+    expect(parsed[0].trustGates).toEqual({
+      trustGateCiPassing: "satisfied",
+      trustGateArtifactPlanPresent: "pending",
+    });
+    expect(parsed[0].trustGateSummary).toContain("1✓");
+    expect(parsed[0].trustGateSummary).toContain(":p");
   });
 
   it("rejects --watch with --json", async () => {
