@@ -75,7 +75,7 @@ Derived from [`0006_PLAN.md`](./0006_PLAN.md). **Data layer:** **Option A** — 
 
 - **Priority:** High
 - **Effort:** M
-- **Status:** `not started`
+- **Status:** `complete`
 - **Description:** Add `plan-artifact-gates.ts` implementing `PlanFrontmatterProbeResult` and `probePlanArtifact(workspacePath, relPath?)` using line-based `---` YAML frontmatter slice (consistent with `spawn.test.ts` fixtures). Resolve default `.ao/plan.md` when `relPath` omitted. No new YAML dependency unless already in repo; prefer minimal parsing.
 - **Dependencies:** none
 - **Files to Change:** `packages/core/src/plan-artifact-gates.ts` (new); `packages/core/src/index.ts`; `packages/core/src/__tests__/plan-artifact-gates.test.ts` (new)
@@ -85,6 +85,12 @@ Derived from [`0006_PLAN.md`](./0006_PLAN.md). **Data layer:** **Option A** — 
   - Core tests + typecheck pass
 
 **API entries used:** new Delta §2 exports only.
+
+**Proof of Work:** `packages/core/src/plan-artifact-gates.ts` — `PlanFrontmatterProbeResult`, `probePlanArtifact`, internal `parsePlanFrontmatter` (exported for tests); `index.ts` re-exports probe + type.
+
+**Acceptance Criteria Check-off:** ✓ missing file `found: false` + path; ✓ `status` / `requiresApproval` from frontmatter; ✓ typecheck + tests.
+
+**Test Artifacts:** `packages/core/src/__tests__/plan-artifact-gates.test.ts` — missing file, default path, custom relPath, `parsePlanFrontmatter` cases.
 
 ---
 

@@ -112,6 +112,10 @@ export {
   trustGateMetadataKey,
 } from "./issue-lifecycle-gates.js";
 
+// Plan artifact probe (0006 T02)
+export type { PlanFrontmatterProbeResult } from "./plan-artifact-gates.js";
+export { probePlanArtifact } from "./plan-artifact-gates.js";
+
 // Global pause constants and utilities
 export {
   GLOBAL_PAUSE_UNTIL_KEY,
