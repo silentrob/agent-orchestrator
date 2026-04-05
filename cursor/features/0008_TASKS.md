@@ -135,7 +135,7 @@ Derived from [`0008_PLAN.md`](./0008_PLAN.md) (approved). **North star:** `spawn
 
 - **Priority:** High
 - **Effort:** M
-- **Status:** `not started`
+- **Status:** `complete`
 - **Description:** Add subcommand (e.g. `ao session advance <sessionId> --phase <phase>` with optional `--worker-role`) calling `SessionManager.advancePhase` via `getSessionManager` + `loadConfig`. Print clear errors when gates block (surface missing gate kinds). Register in `packages/cli/src/index.ts` under existing `registerSession` or sibling.
 - **Dependencies:** T03
 - **Files to Change:** `packages/cli/src/commands/session.ts`; `packages/cli/src/index.ts`; `packages/cli/__tests__/commands/session.test.ts` (or new) if pattern exists
@@ -145,6 +145,13 @@ Derived from [`0008_PLAN.md`](./0008_PLAN.md) (approved). **North star:** `spawn
   - `pnpm --filter @composio/ao-cli typecheck` passes
 
 **API entries used:** `registerSession`, `loadConfig`, `createSessionManager` / `getSessionManager`, **PROPOSED** `advancePhase` on manager.
+
+- **Proof of work:** Added `session advance` in `session.ts` (`--phase` required, `--worker-role`, `--skip-gate-check`); validates phase via `ISSUE_WORKFLOW_PHASES` and roles via `WorkerRole`; calls `getSessionManager` + `advancePhase`; on gate errors prints message + dim hint. Parent `session` description lists `advance`. No `index.ts` change (`registerSession` already wired). Tests in `session.test.ts` (`session advance` describe).
+- **Acceptance Criteria Check-off:**
+  - ✓ Parses args and invokes `advancePhase` with correct payload
+  - ✓ Mocked `SessionManager` tests: success path, `skipGateCheck`, gate error + hint, invalid phase
+  - ✓ `pnpm --filter @composio/ao-cli typecheck` passes
+- **Test Artifacts:** `packages/cli/__tests__/commands/session.test.ts` — `describe("session advance")` (4 tests).
 
 ---
 

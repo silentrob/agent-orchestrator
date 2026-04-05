@@ -1,16 +1,46 @@
 import { spawn } from "node:child_process";
 import chalk from "chalk";
 import type { Command } from "commander";
-import { loadConfig, SessionNotRestorableError, WorkspaceMissingError } from "@composio/ao-core";
+import {
+  loadConfig,
+  SessionNotRestorableError,
+  WorkspaceMissingError,
+  ISSUE_WORKFLOW_PHASES,
+  ISSUE_WORKFLOW_PHASE_METADATA_KEY,
+  type IssueWorkflowPhase,
+  type WorkerRole,
+} from "@composio/ao-core";
 import { git, getTmuxActivity, tmux } from "../lib/shell.js";
 import { formatAge } from "../lib/format.js";
 import { getSessionManager } from "../lib/create-session-manager.js";
 import { isOrchestratorSessionName } from "../lib/session-utils.js";
 
+const WORKER_ROLES: readonly WorkerRole[] = ["planner", "executor", "validator", "reproducer"];
+
+function parseWorkflowPhase(value: string): IssueWorkflowPhase {
+  const v = value.trim().toLowerCase();
+  const found = ISSUE_WORKFLOW_PHASES.find((p) => p === v);
+  if (!found) {
+    throw new Error(
+      `Invalid phase "${value}". Expected one of: ${ISSUE_WORKFLOW_PHASES.join(", ")}`,
+    );
+  }
+  return found;
+}
+
+function parseWorkerRoleCli(value: string): WorkerRole {
+  const v = value.trim().toLowerCase();
+  const found = WORKER_ROLES.find((r) => r === v);
+  if (!found) {
+    throw new Error(`Invalid worker role "${value}". Expected one of: ${WORKER_ROLES.join(", ")}`);
+  }
+  return found;
+}
+
 export function registerSession(program: Command): void {
   const session = program
     .command("session")
-    .description("Session management (ls, kill, cleanup, restore, claim-pr)");
+    .description("Session management (ls, kill, cleanup, restore, claim-pr, advance)");
 
   session
     .command("ls")
@@ -337,4 +367,76 @@ export function registerSession(program: Command): void {
         process.exit(1);
       }
     });
+
+  session
+    .command("advance")
+    .description(
+      "Advance an issue-backed session to a workflow phase (trust gates apply when configured)",
+    )
+    .argument("<session>", "Session name")
+    .requiredOption("--phase <phase>", "Target workflow phase (see ISSUE_WORKFLOW_PHASES)")
+    .option("--worker-role <role>", "planner | executor | validator | reproducer")
+    .option(
+      "--skip-gate-check",
+      "Bypass trust-gate evaluation (dangerous; intended for tests or explicit override)",
+    )
+    .action(
+      async (
+        sessionName: string,
+        opts: { phase: string; workerRole?: string; skipGateCheck?: boolean },
+      ) => {
+        const config = loadConfig();
+        const sm = await getSessionManager(config);
+
+        if (!sm.advancePhase) {
+          console.error(chalk.red("advancePhase is not available on this session manager build."));
+          process.exit(1);
+        }
+
+        let phase: IssueWorkflowPhase;
+        try {
+          phase = parseWorkflowPhase(opts.phase);
+        } catch (err) {
+          console.error(chalk.red(err instanceof Error ? err.message : String(err)));
+          process.exit(1);
+        }
+
+        let workerRole: WorkerRole | undefined;
+        if (opts.workerRole !== undefined && opts.workerRole !== "") {
+          try {
+            workerRole = parseWorkerRoleCli(opts.workerRole);
+          } catch (err) {
+            console.error(chalk.red(err instanceof Error ? err.message : String(err)));
+            process.exit(1);
+          }
+        }
+
+        try {
+          const updated = await sm.advancePhase(
+            sessionName,
+            { phase, ...(workerRole !== undefined ? { workerRole } : {}) },
+            { skipGateCheck: opts.skipGateCheck === true },
+          );
+          const phaseLabel =
+            updated.metadata[ISSUE_WORKFLOW_PHASE_METADATA_KEY] ?? phase;
+          console.log(
+            chalk.green(`\nSession ${sessionName} advanced to workflow phase "${phaseLabel}".`),
+          );
+          if (updated.metadata["workerRole"]) {
+            console.log(chalk.dim(`  Worker role: ${updated.metadata["workerRole"]}`));
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(chalk.red(`Failed to advance session ${sessionName}: ${msg}`));
+          if (/Missing Trust Vector gates/i.test(msg)) {
+            console.error(
+              chalk.dim(
+                "Resolve the listed gates (e.g. plan approval, CI) or use --skip-gate-check only if you accept bypassing policy.",
+              ),
+            );
+          }
+          process.exit(1);
+        }
+      },
+    );
 }
