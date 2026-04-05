@@ -159,7 +159,7 @@ Derived from [`0008_PLAN.md`](./0008_PLAN.md) (approved). **North star:** `spawn
 
 - **Priority:** Medium
 - **Effort:** S
-- **Status:** `not started`
+- **Status:** `complete`
 - **Description:** Extend `registerStatus` output (table or JSON) so operators see when an **advance** would fail: e.g. compact line “advance blocked: human_plan_approval” using metadata + optional dry evaluation. Do not duplicate large policy engine; reuse `listMissingExecutorTrustGates` or T01 for **current** phase → **next** phase preview where feasible.
 - **Dependencies:** T01 (for preview), T03 (for parity with real advance)
 - **Files to Change:** `packages/cli/src/commands/status.ts`; tests if present
@@ -168,6 +168,12 @@ Derived from [`0008_PLAN.md`](./0008_PLAN.md) (approved). **North star:** `spawn
   - No regression in existing status columns
 
 **API entries used:** `registerStatus`, `listMissingExecutorTrustGates`, T01 `listMissingTransitionGates`, `ISSUE_WORKFLOW_PHASE_METADATA_KEY`, `trustGateMetadataKey` / metadata scan (already partially in status.ts).
+
+- **Proof of work:** `SessionInfo.advanceBlocked` + `computeAdvanceBlocked()` in `status.ts` — when `requireIssueLifecycleGates` and issue-backed worker with worktree: infer current phase, canonical **next** phase via `ISSUE_WORKFLOW_PHASES`, merge trust metadata (same pattern as `advancePhase`), `resolvePlanArtifactProbeForIssue` + `probePlanArtifact`, `listMissingTransitionGates(from,to,ctx)`. Table: new **Advance** column (yellow when blocked); JSON: `advanceBlocked` string or `null`. Tests use `getSessionsDir` for metadata path alignment; two JSON tests (blocked / null).
+- **Acceptance Criteria Check-off:**
+  - ✓ JSON `advanceBlocked`; text **Advance** column with `→<next>: <kinds>`
+  - ✓ Existing columns preserved (Phase, Gates, …); tests 37 in `status.test.ts`
+- **Test Artifacts:** `packages/cli/__tests__/commands/status.test.ts` — `outputs JSON advanceBlocked when…`, `outputs advanceBlocked null when lifecycle gates are not required`.
 
 ---
 

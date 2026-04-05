@@ -10,7 +10,12 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { type Session, type SessionManager, type ActivityState } from "@composio/ao-core";
+import {
+  type Session,
+  type SessionManager,
+  type ActivityState,
+  getSessionsDir,
+} from "@composio/ao-core";
 
 const {
   mockTmux,
@@ -249,8 +254,11 @@ beforeEach(() => {
     reactions: {},
   } as Record<string, unknown>;
 
-  // Keep test metadata under the temp fixture directory instead of ~/.agent-orchestrator.
-  sessionsDir = join(tmpDir, "sessions");
+  const mainRepo = join(tmpDir, "main-repo");
+  mkdirSync(mainRepo, { recursive: true });
+
+  // Align with core `getSessionsDir` so status gate preview reads the same metadata files.
+  sessionsDir = getSessionsDir(configPath, mainRepo);
   mkdirSync(sessionsDir, { recursive: true });
   sessionsDirRef.current = sessionsDir;
 
@@ -658,6 +666,78 @@ describe("status command", () => {
     });
     expect(parsed[0].trustGateSummary).toContain("1✓");
     expect(parsed[0].trustGateSummary).toContain(":p");
+  });
+
+  it("outputs JSON advanceBlocked when advance to next phase would fail trust gates", async () => {
+    const base = mockConfigRef.current as {
+      configPath: string;
+      projects: { "my-app": Record<string, unknown> };
+    };
+    mockConfigRef.current = {
+      ...base,
+      projects: {
+        ...base.projects,
+        "my-app": {
+          ...base.projects["my-app"],
+          requireIssueLifecycleGates: true,
+        },
+      },
+    } as Record<string, unknown>;
+
+    const ws = join(tmpDir, "ws-advance-preview");
+    mkdirSync(ws, { recursive: true });
+    writeFileSync(
+      join(sessionsDir, "app-1"),
+      [
+        `worktree=${ws}`,
+        "branch=feat/t",
+        "status=working",
+        "issue=INT-1",
+        "issueWorkflowPhase=plan",
+        "workerRole=planner",
+        "planArtifactIssue=INT-1",
+      ].join("\n"),
+    );
+
+    mockTmux.mockImplementation(async (...args: string[]) => {
+      if (args[0] === "list-sessions") return "app-1";
+      if (args[0] === "display-message") return String(Math.floor(Date.now() / 1000));
+      return null;
+    });
+    mockGit.mockResolvedValue("feat/t");
+
+    await program.parseAsync(["node", "test", "status", "--json"]);
+
+    const jsonCalls = consoleSpy.mock.calls.map((c) => c[0]).join("");
+    const parsed = JSON.parse(jsonCalls) as Array<{ advanceBlocked: string | null }>;
+    expect(parsed[0].advanceBlocked).toMatch(/→execute:/);
+    expect(parsed[0].advanceBlocked).toContain("artifact_plan_present");
+  });
+
+  it("outputs advanceBlocked null in JSON when lifecycle gates are not required", async () => {
+    writeFileSync(
+      join(sessionsDir, "app-1"),
+      [
+        "worktree=/tmp/wt",
+        "branch=feat/x",
+        "status=working",
+        "issue=INT-1",
+        "issueWorkflowPhase=plan",
+      ].join("\n"),
+    );
+
+    mockTmux.mockImplementation(async (...args: string[]) => {
+      if (args[0] === "list-sessions") return "app-1";
+      if (args[0] === "display-message") return String(Math.floor(Date.now() / 1000));
+      return null;
+    });
+    mockGit.mockResolvedValue("feat/x");
+
+    await program.parseAsync(["node", "test", "status", "--json"]);
+
+    const jsonCalls = consoleSpy.mock.calls.map((c) => c[0]).join("");
+    const parsed = JSON.parse(jsonCalls) as Array<{ advanceBlocked: string | null }>;
+    expect(parsed[0].advanceBlocked).toBeNull();
   });
 
   it("rejects --watch with --json", async () => {
