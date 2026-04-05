@@ -36,6 +36,7 @@ Derived from [`0005_PLAN.md`](./0005_PLAN.md). Executes **runtime** work after *
 | `packages/web/src/lib/types.ts`              | `DashboardSession`, `IssueWorkflowPhase` re-export                               | T03           |
 | `packages/web/src/lib/serialize.ts`          | `sessionToDashboard`                                                               | T03           |
 | `packages/cli/src/commands/status.ts`        | `registerStatus` / `ao status`                                                     | T04           |
+| `packages/core/src/orchestrator-prompt.ts`   | `generateOrchestratorPrompt`, `OrchestratorPromptConfig`                           | T05           |
 
 ---
 
@@ -127,13 +128,19 @@ Derived from [`0005_PLAN.md`](./0005_PLAN.md). Executes **runtime** work after *
 
 - **Priority:** Medium
 - **Effort:** S
-- **Status:** `not started`
+- **Status:** `complete`
 - **Description:** Extend `generateOrchestratorPrompt` with a short subsection: reading `issueWorkflowPhase` from session metadata, Trust Vector gates, pointer to 0004 specs. No new APIs.
 - **Dependencies:** T01
 - **Files to Change:** `packages/core/src/orchestrator-prompt.ts`; `orchestrator-prompt.test.ts`
 - **Acceptance Criteria:**
   - Prompt mentions phase metadata keys and trust gates concept
   - Tests assert key strings present
+
+**Proof of Work:** New section `## Issue lifecycle and Trust Vector (0004)` — embeds `ISSUE_WORKFLOW_PHASE_METADATA_KEY`, `ISSUE_WORKFLOW_PHASES`, `TRUST_GATE_KINDS`; points to `docs/specs/issue-lifecycle-trust-vector.md` and `docs/specs/role-typed-artifacts.md`.
+
+**Acceptance Criteria Check-off:** ✓ metadata key + phases + gates; ✓ spec paths; ✓ unit test.
+
+**Test Artifacts:** `orchestrator-prompt.test.ts` — "documents issue workflow phase metadata key and Trust Vector (0005)".
 
 ---
 

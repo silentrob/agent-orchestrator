@@ -6,6 +6,11 @@
  */
 
 import type { OrchestratorConfig, ProjectConfig } from "./types.js";
+import {
+  ISSUE_WORKFLOW_PHASE_METADATA_KEY,
+  ISSUE_WORKFLOW_PHASES,
+  TRUST_GATE_KINDS,
+} from "./issue-lifecycle-types.js";
 
 export interface OrchestratorPromptConfig {
   config: OrchestratorConfig;
@@ -149,6 +154,14 @@ Remove completed sessions:
 \`\`\`bash
 ao session cleanup -p ${projectId}  # Kill sessions where PR is merged or issue is closed
 \`\`\``);
+
+  sections.push(`## Issue lifecycle and Trust Vector (0004)
+
+Issue-backed worker sessions store **\`issueWorkflowPhase\`** in flat session metadata under the key \`${ISSUE_WORKFLOW_PHASE_METADATA_KEY}\`. Phases: ${ISSUE_WORKFLOW_PHASES.join(", ")}. Use \`ao status\` (Phase column) or the web dashboard to see the current value when set.
+
+**Trust Vector:** named gate kinds (policy-defined, enforcement varies) include ${TRUST_GATE_KINDS.join(", ")}.
+
+Read \`docs/specs/issue-lifecycle-trust-vector.md\` and \`docs/specs/role-typed-artifacts.md\` for vocabulary and alignment with issue-centric workflows.`);
 
   sections.push(`## Planner workflow (POC)
 

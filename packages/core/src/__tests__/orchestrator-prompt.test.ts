@@ -82,4 +82,19 @@ describe("generateOrchestratorPrompt", () => {
     expect(prompt).toContain("defaults to false");
     expect(prompt).toContain("ao session restore");
   });
+
+  it("documents issue workflow phase metadata key and Trust Vector (0005)", () => {
+    const prompt = generateOrchestratorPrompt({
+      config,
+      projectId: "my-app",
+      project: config.projects["my-app"]!,
+    });
+
+    expect(prompt).toContain("## Issue lifecycle and Trust Vector (0004)");
+    expect(prompt).toContain("issueWorkflowPhase");
+    expect(prompt).toContain("Trust Vector");
+    expect(prompt).toContain("issue-lifecycle-trust-vector.md");
+    expect(prompt).toContain("role-typed-artifacts.md");
+    expect(prompt).toContain("ci_passing");
+  });
 });
