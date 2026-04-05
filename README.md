@@ -188,3 +188,7 @@ Contributions welcome. The plugin system makes it straightforward to add support
 ## License
 
 MIT
+
+---
+
+See [AUTHORS.md](AUTHORS.md) for the full list of contributors.
