@@ -116,6 +116,14 @@ export {
 export type { PlanFrontmatterProbeResult } from "./plan-artifact-gates.js";
 export { probePlanArtifact } from "./plan-artifact-gates.js";
 
+// Executor trust gate evaluation (0006 T03)
+export type { ExecutorTrustGateContext } from "./evaluate-trust-gates.js";
+export {
+  MVP_EXECUTOR_TRUST_GATE_KINDS,
+  isPlanIssueAligned,
+  listMissingExecutorTrustGates,
+} from "./evaluate-trust-gates.js";
+
 // Global pause constants and utilities
 export {
   GLOBAL_PAUSE_UNTIL_KEY,

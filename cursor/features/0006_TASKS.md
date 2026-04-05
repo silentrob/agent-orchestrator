@@ -98,7 +98,7 @@ Derived from [`0006_PLAN.md`](./0006_PLAN.md). **Data layer:** **Option A** — 
 
 - **Priority:** High
 - **Effort:** M
-- **Status:** `not started`
+- **Status:** `complete`
 - **Description:** Implement pure helpers (same module as T01 or sibling) that, given **metadata record** + optional `PlanFrontmatterProbeResult` + `spawnConfig` context (`issueId`, `planArtifactIssue` rules), compute **which MVP gates are missing** for allowing an **execute**-phase spawn when `requireIssueLifecycleGates` is on. Enforce plan mitigation: when `planArtifactIssue` is set, it must match `issueId` before treating plan-based gates as satisfied. Document canonical session assumption in JSDoc (single worker per issue for gate evaluation at spawn).
 - **Dependencies:** T01, T02
 - **Files to Change:** `packages/core/src/issue-lifecycle-gates.ts` or `evaluate-trust-gates.ts` (new); tests
@@ -108,6 +108,12 @@ Derived from [`0006_PLAN.md`](./0006_PLAN.md). **Data layer:** **Option A** — 
   - No filesystem access in pure evaluator except via injected probe result
 
 **API entries used:** `TrustGateKind`; `defaultIssueWorkflowPhaseForSpawn`; `SessionSpawnConfig` fields; T01/T02 new exports.
+
+**Proof of Work:** `packages/core/src/evaluate-trust-gates.ts` — `MVP_EXECUTOR_TRUST_GATE_KINDS`, `ExecutorTrustGateContext`, `listMissingExecutorTrustGates`, `isPlanIssueAligned`; `index.ts` re-exports.
+
+**Acceptance Criteria Check-off:** ✓ MVP combinations covered in tests; ✓ `planArtifactIssue`/`issueId` mismatch fails closed; ✓ pure (no fs — probe injected).
+
+**Test Artifacts:** `packages/core/src/__tests__/evaluate-trust-gates.test.ts` — `isPlanIssueAligned` cases; `listMissingExecutorTrustGates` ci/artifact/human/mismatch/MVP order.
 
 ---
 
