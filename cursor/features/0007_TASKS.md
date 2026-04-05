@@ -2,7 +2,7 @@
 feature_number: 0007
 plan: "./0007_PLAN.md"
 plan_status: approved
-tasks_status: in progress
+tasks_status: complete
 created_at: "2026-04-02T12:00:00Z"
 ---
 
@@ -169,7 +169,7 @@ Derived from [`0007_PLAN.md`](./0007_PLAN.md). **MVP:** approve plan frontmatter
 
 - **Priority:** Low
 - **Effort:** S
-- **Status:** `not started`
+- **Status:** `complete`
 - **Description:** Add a short bullet to `AGENTS.md` (or CLI help text only) documenting `ao plan approve` and `ao plan send`. No large doc rewrite.
 - **Dependencies:** T03
 - **Files to Change:** `AGENTS.md` and/or `packages/cli/src/commands/plan.ts` descriptions
@@ -177,6 +177,11 @@ Derived from [`0007_PLAN.md`](./0007_PLAN.md). **MVP:** approve plan frontmatter
   - One discoverable mention of new commands
 
 **API entries used:** none (documentation / strings only).
+
+- **Proof of work:** `AGENTS.md` — new **CLI: planner plan workflow** subsection with two bullets for `ao plan approve` and `ao plan send`; existing `plan.ts` descriptions already summarize the subcommands.
+- **Acceptance Criteria Check-off:**
+  - ✓ Discoverable mention of both commands in AGENTS.md
+- **Test Artifacts:** none (documentation-only).
 
 ---
 

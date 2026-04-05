@@ -16,6 +16,11 @@ pnpm lint:fix                           # ESLint fix
 pnpm format                             # Prettier format
 ```
 
+## CLI: planner plan workflow
+
+- **`ao plan approve <session>`** — Marks the session plan file (default `.ao/plan.md`, or `planArtifactRelPath` in metadata) as human-approved by updating YAML frontmatter (`status: approved`).
+- **`ao plan send <session> [message…]`** — Same delivery path as **`ao send`**; use for feedback to a planner session under the `plan` subcommand.
+
 ## Architecture TL;DR
 
 Monorepo (pnpm) with packages: `core`, `cli`, `web`, and `plugins/*`. The web dashboard is a Next.js 15 app (App Router) with React 19 and Tailwind CSS v4. Data flows from `agent-orchestrator.yaml` through core's `loadConfig()` to API routes, served via SSR and a 5s-interval SSE stream. Terminal sessions use WebSocket connections to tmux PTYs. See CLAUDE.md for the full plugin architecture (8 slots), session lifecycle, and data flow.
