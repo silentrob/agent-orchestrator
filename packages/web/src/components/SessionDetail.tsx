@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { useMediaQuery, MOBILE_BREAKPOINT } from "@/hooks/useMediaQuery";
 import { type DashboardSession, type DashboardPR, isPRMergeReady } from "@/lib/types";
+import { IssueWorkflowPhaseBadge } from "./IssueWorkflowPhaseBadge";
 import { CI_STATUS } from "@composio/ao-core/types";
 import { cn } from "@/lib/cn";
 import { CICheckList } from "./CIBadge";
@@ -82,6 +83,7 @@ function SessionTopStrip({
   crumbLabel,
   mobileSimple = false,
   rightSlot,
+  issueWorkflowPhase,
 }: {
   headline: string;
   activityLabel: string;
@@ -93,6 +95,7 @@ function SessionTopStrip({
   crumbLabel: string;
   mobileSimple?: boolean;
   rightSlot?: ReactNode;
+  issueWorkflowPhase?: DashboardSession["issueWorkflowPhase"];
 }) {
   return (
     <section className={`session-page-header${mobileSimple ? " session-page-header--mobile" : ""}`}>
@@ -146,6 +149,7 @@ function SessionTopStrip({
                 {activityLabel}
               </span>
             </div>
+            {issueWorkflowPhase ? <IssueWorkflowPhaseBadge phase={issueWorkflowPhase} /> : null}
             {branch ? (
               pr ? (
                 <a
@@ -327,6 +331,7 @@ function OrchestratorStatusStrip({
   pr,
   crumbHref,
   crumbLabel,
+  issueWorkflowPhase,
 }: {
   zones: OrchestratorZones;
   createdAt: string;
@@ -337,6 +342,7 @@ function OrchestratorStatusStrip({
   pr: DashboardPR | null;
   crumbHref: string;
   crumbLabel: string;
+  issueWorkflowPhase?: DashboardSession["issueWorkflowPhase"];
 }) {
   const [uptime, setUptime] = useState<string>("");
 
@@ -375,6 +381,7 @@ function OrchestratorStatusStrip({
         isOrchestrator
         crumbHref={crumbHref}
         crumbLabel={crumbLabel}
+        issueWorkflowPhase={issueWorkflowPhase}
         rightSlot={
           <div className="flex flex-wrap items-center gap-3 lg:justify-end">
             <div className="flex items-baseline gap-1.5 mr-2">
@@ -484,6 +491,7 @@ export function SessionDetail({
           pr={pr}
           crumbHref={crumbHref}
           crumbLabel={crumbLabel}
+          issueWorkflowPhase={session.issueWorkflowPhase}
         />
       )}
 
@@ -500,6 +508,7 @@ export function SessionDetail({
               crumbHref={crumbHref}
               crumbLabel={crumbLabel}
               mobileSimple={isMobile}
+              issueWorkflowPhase={session.issueWorkflowPhase}
             />
           )}
 

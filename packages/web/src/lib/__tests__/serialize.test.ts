@@ -126,6 +126,21 @@ describe("sessionToDashboard", () => {
     expect(dashboard.lastActivityAt).toBe("2025-01-01T01:00:00.000Z");
   });
 
+  it("maps issueWorkflowPhase from metadata when valid", () => {
+    const dashboard = sessionToDashboard(
+      createCoreSession({ metadata: { issueWorkflowPhase: "execute" } }),
+    );
+    expect(dashboard.issueWorkflowPhase).toBe("execute");
+  });
+
+  it("sets issueWorkflowPhase null when missing or invalid", () => {
+    expect(sessionToDashboard(createCoreSession()).issueWorkflowPhase).toBeNull();
+    expect(
+      sessionToDashboard(createCoreSession({ metadata: { issueWorkflowPhase: "invalid" } }))
+        .issueWorkflowPhase,
+    ).toBeNull();
+  });
+
   it("should use agentInfo summary with summaryIsFallback false", () => {
     const coreSession = createCoreSession({
       agentInfo: {
@@ -406,6 +421,7 @@ describe("enrichSessionPR", () => {
       lastActivityAt: new Date().toISOString(),
       pr: null,
       metadata: {},
+      issueWorkflowPhase: null,
     };
     const pr = createPRInfo();
     const scm = createMockSCM();
@@ -613,6 +629,7 @@ describe("enrichSessionIssueTitle", () => {
       lastActivityAt: new Date().toISOString(),
       pr: null,
       metadata: {},
+      issueWorkflowPhase: null,
       ...overrides,
     };
   }
@@ -966,6 +983,7 @@ describe("computeStats", () => {
       lastActivityAt: new Date().toISOString(),
       pr: null,
       metadata: {},
+      issueWorkflowPhase: null,
       ...overrides,
     };
   }

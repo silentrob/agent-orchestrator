@@ -25,6 +25,8 @@ function makeWorkerSession(): DashboardSession {
     issueId: "https://linear.app/test/issue/INT-100",
     issueUrl: "https://linear.app/test/issue/INT-100",
     issueLabel: "INT-100",
+    issueTitle: null,
+    issueWorkflowPhase: null,
     summary: "Test worker session",
     summaryIsFallback: false,
     createdAt: new Date().toISOString(),
@@ -99,9 +101,9 @@ describe("SessionPage project polling", () => {
     expect(fetch).toHaveBeenCalledWith("/api/sessions?project=my-app&orchestratorOnly=true");
 
     expect(
-      vi.mocked(fetch).mock.calls.filter(
-        ([url]) => url === "/api/sessions?project=my-app&orchestratorOnly=true",
-      ),
+      vi
+        .mocked(fetch)
+        .mock.calls.filter(([url]) => url === "/api/sessions?project=my-app&orchestratorOnly=true"),
     ).toHaveLength(1);
 
     await act(async () => {
@@ -110,9 +112,9 @@ describe("SessionPage project polling", () => {
     await flushAsyncWork();
 
     expect(
-      vi.mocked(fetch).mock.calls.filter(
-        ([url]) => url === "/api/sessions?project=my-app&orchestratorOnly=true",
-      ),
+      vi
+        .mocked(fetch)
+        .mock.calls.filter(([url]) => url === "/api/sessions?project=my-app&orchestratorOnly=true"),
     ).toHaveLength(1);
   });
 });

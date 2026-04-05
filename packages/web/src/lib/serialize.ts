@@ -7,6 +7,8 @@
 
 import {
   isOrchestratorSession,
+  ISSUE_WORKFLOW_PHASES,
+  ISSUE_WORKFLOW_PHASE_METADATA_KEY,
   type Session,
   type Agent,
   type SCM,
@@ -15,6 +17,7 @@ import {
   type ProjectConfig,
   type OrchestratorConfig,
   type PluginRegistry,
+  type IssueWorkflowPhase,
 } from "@composio/ao-core";
 import type {
   DashboardSession,
@@ -26,6 +29,16 @@ import { TTLCache, prCache, prCacheKey, type PREnrichmentData } from "./cache";
 
 /** Cache for issue titles (5 min TTL — issue titles rarely change) */
 const issueTitleCache = new TTLCache<string>(300_000);
+
+/** Parse validated issue workflow phase from flat session metadata (0005). */
+function parseIssueWorkflowPhase(metadata: Record<string, string>): IssueWorkflowPhase | null {
+  const raw = metadata[ISSUE_WORKFLOW_PHASE_METADATA_KEY];
+  if (typeof raw !== "string" || raw.trim() === "") return null;
+  const v = raw.trim();
+  return (ISSUE_WORKFLOW_PHASES as readonly string[]).includes(v)
+    ? (v as IssueWorkflowPhase)
+    : null;
+}
 
 /** Resolve which project a session belongs to. */
 export function resolveProject(
@@ -66,6 +79,7 @@ export function sessionToDashboard(session: Session): DashboardSession {
     lastActivityAt: session.lastActivityAt.toISOString(),
     pr: session.pr ? basicPRToDashboard(session.pr) : null,
     metadata: session.metadata,
+    issueWorkflowPhase: parseIssueWorkflowPhase(session.metadata),
   };
 }
 

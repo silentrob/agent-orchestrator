@@ -36,6 +36,7 @@ function createSession(overrides?: Partial<DashboardSession>): DashboardSession 
     lastActivityAt: new Date().toISOString(),
     pr: null,
     metadata: {},
+    issueWorkflowPhase: null,
     ...overrides,
   };
 }

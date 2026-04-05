@@ -33,6 +33,8 @@ Derived from [`0005_PLAN.md`](./0005_PLAN.md). Executes **runtime** work after *
 | `packages/core/src/types.ts`                 | `Session`, `SessionSpawnConfig`                                                    | metadata      |
 | `packages/core/src/metadata.ts`              | `updateMetadata`                                                                   | T01           |
 | `packages/core/src/session-manager.ts`       | `createSessionManager`, `spawn`                                                    | T01           |
+| `packages/web/src/lib/types.ts`              | `DashboardSession`, `IssueWorkflowPhase` re-export                               | T03           |
+| `packages/web/src/lib/serialize.ts`          | `sessionToDashboard`                                                               | T03           |
 
 ---
 
@@ -84,13 +86,19 @@ Derived from [`0005_PLAN.md`](./0005_PLAN.md). Executes **runtime** work after *
 
 - **Priority:** High
 - **Effort:** M
-- **Status:** `not started`
+- **Status:** `complete`
 - **Description:** Map `metadata.issueWorkflowPhase` (or chosen key) into dashboard types and show a compact badge or line on `SessionDetail` / `SessionCard` when present. Tailwind-only; existing patterns.
 - **Dependencies:** T01
 - **Files to Change:** `packages/web/src/lib/types.ts` or session mapping; `SessionDetail.tsx` / `SessionCard.tsx`; tests in `packages/web/src/__tests__/`
 - **Acceptance Criteria:**
   - Phase visible when metadata set
   - `pnpm --filter @composio/ao-web test` for touched components passes (or add tests)
+
+**Proof of Work:** `DashboardSession.issueWorkflowPhase` populated in `sessionToDashboard` via `ISSUE_WORKFLOW_PHASE_METADATA_KEY` + `ISSUE_WORKFLOW_PHASES`; `IssueWorkflowPhaseBadge` component; `SessionTopStrip` / orchestrator strip show badge; `SessionCard` (active + done) meta rows; tests for serialize mapping + SessionDetail + SessionCard.
+
+**Acceptance Criteria Check-off:** ✓ phase when metadata valid; ✓ tests added (serialize + components); ✓ `pnpm --filter @composio/ao-web test` (setup: extend `expect` with `@testing-library/jest-dom/matchers` for Vitest globals).
+
+**Test Artifacts:** `serialize.test.ts` — issueWorkflowPhase mapping; `SessionDetail.issuePhase.test.tsx`; `components.test.tsx` — SessionCard phase badge cases.
 
 ---
 

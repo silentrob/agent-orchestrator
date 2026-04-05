@@ -27,6 +27,7 @@ function makeSession(overrides?: Partial<DashboardSession>): DashboardSession {
     lastActivityAt: new Date().toISOString(),
     pr: null,
     metadata: {},
+    issueWorkflowPhase: null,
     ...overrides,
   };
 }
@@ -128,9 +129,7 @@ describe("getSessionTitle", () => {
       issueTitle: "Add user authentication",
       branch: "feat/auth",
     });
-    expect(getSessionTitle(session)).toBe(
-      "Implementing OAuth2 authentication with JWT tokens",
-    );
+    expect(getSessionTitle(session)).toBe("Implementing OAuth2 authentication with JWT tokens");
   });
 
   it("skips fallback summaries in favor of issue title", () => {

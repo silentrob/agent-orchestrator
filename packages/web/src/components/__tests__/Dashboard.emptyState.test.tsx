@@ -49,6 +49,7 @@ describe("Dashboard empty state", () => {
             lastActivityAt: new Date().toISOString(),
             pr: null,
             metadata: {},
+            issueWorkflowPhase: null,
           },
         ]}
       />,

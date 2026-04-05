@@ -191,6 +191,16 @@ describe("SessionCard", () => {
     expect(screen.getByText("Fixing auth")).toBeInTheDocument();
   });
 
+  it("shows issue workflow phase badge when issueWorkflowPhase is set", () => {
+    render(<SessionCard session={makeSession({ issueWorkflowPhase: "execute" })} />);
+    expect(screen.getByTestId("issue-workflow-phase-badge").textContent).toContain("Execute");
+  });
+
+  it("does not show issue workflow phase badge when phase is null", () => {
+    render(<SessionCard session={makeSession({ issueWorkflowPhase: null })} />);
+    expect(screen.queryByTestId("issue-workflow-phase-badge")).toBeNull();
+  });
+
   it("shows PR title instead of summary when PR exists", () => {
     const pr = makePR({ title: "feat: add auth" });
     const session = makeSession({ summary: "Fixing auth", pr });
@@ -525,7 +535,9 @@ describe("SessionCard", () => {
       expect(screen.getByRole("textbox", { name: /type a reply to the agent/i })).toHaveValue(
         "please continue",
       );
-      expect(screen.getByRole("textbox", { name: /type a reply to the agent/i })).not.toBeDisabled();
+      expect(
+        screen.getByRole("textbox", { name: /type a reply to the agent/i }),
+      ).not.toBeDisabled();
     });
   });
 

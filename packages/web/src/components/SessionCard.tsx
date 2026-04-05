@@ -11,6 +11,7 @@ import {
 } from "@/lib/types";
 import { cn } from "@/lib/cn";
 import { getSessionTitle } from "@/lib/format";
+import { IssueWorkflowPhaseBadge } from "./IssueWorkflowPhaseBadge";
 import { CICheckList } from "./CIBadge";
 import { ActivityDot } from "./ActivityDot";
 import { getSizeLabel } from "./PRStatus";
@@ -167,7 +168,8 @@ function SessionCardView({ session, onSend, onKill, onMerge, onRestore }: Sessio
   const isDone = level === "done";
   const secondaryText = session.issueLabel
     ? `${session.issueLabel}${session.issueTitle ? ` · ${session.issueTitle}` : ""}`
-    : session.issueTitle ?? (session.summary && session.summary !== title ? session.summary : null);
+    : (session.issueTitle ??
+      (session.summary && session.summary !== title ? session.summary : null));
   const cardFrameClass = isReadyToMerge
     ? "session-card--merge-frame"
     : alerts.length > 0
@@ -239,6 +241,9 @@ function SessionCardView({ session, onSend, onKill, onMerge, onRestore }: Sessio
 
         {/* Row 3: Meta chips */}
         <div className="flex flex-wrap items-center gap-1.5 px-3.5 pb-3">
+          {session.issueWorkflowPhase ? (
+            <IssueWorkflowPhaseBadge phase={session.issueWorkflowPhase} />
+          ) : null}
           {session.branch && (
             <span className="done-meta-chip font-[var(--font-mono)]">
               <svg
@@ -393,7 +398,11 @@ function SessionCardView({ session, onSend, onKill, onMerge, onRestore }: Sessio
     >
       {/* Header row: dot + session ID + terminal link */}
       <div className="session-card__header flex items-center gap-2 px-4 pt-4 pb-2">
-        {isReadyToMerge ? <ActivityDot activity="ready" /> : <ActivityDot activity={session.activity} />}
+        {isReadyToMerge ? (
+          <ActivityDot activity="ready" />
+        ) : (
+          <ActivityDot activity={session.activity} />
+        )}
         <span className="font-[var(--font-mono)] text-[11px] tracking-wide text-[var(--color-text-muted)]">
           {session.id}
         </span>
@@ -458,6 +467,9 @@ function SessionCardView({ session, onSend, onKill, onMerge, onRestore }: Sessio
 
         {/* Meta row: branch + PR# + diff size (simplified for merge-ready) */}
         <div className="session-card__meta flex flex-wrap items-center gap-1.5 px-4 pb-2">
+          {session.issueWorkflowPhase ? (
+            <IssueWorkflowPhaseBadge phase={session.issueWorkflowPhase} />
+          ) : null}
           {session.branch && (
             <span className="font-[var(--font-mono)] text-[10px] text-[var(--color-text-muted)]">
               {session.branch}
@@ -516,8 +528,7 @@ function SessionCardView({ session, onSend, onKill, onMerge, onRestore }: Sessio
                   key={alert.key}
                   className="session-card__alert-pill inline-flex items-stretch overflow-hidden border"
                   style={{
-                    borderColor:
-                      alert.borderColor ?? alert.color ?? "var(--color-border-default)",
+                    borderColor: alert.borderColor ?? alert.color ?? "var(--color-border-default)",
                   }}
                 >
                   <a
@@ -608,28 +619,30 @@ function SessionCardView({ session, onSend, onKill, onMerge, onRestore }: Sessio
               </svg>
               merge
             </button>
-          ) : !isTerminal && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onKill?.(session.id);
-              }}
-              aria-label="Terminate session"
-              className="session-card__control session-card__terminate inline-flex shrink-0 cursor-pointer items-center justify-center border border-[color-mix(in_srgb,var(--color-status-error)_35%,transparent)] px-2.5 py-1 text-[11px] text-[var(--color-status-error)] transition-colors hover:border-[var(--color-status-error)] hover:bg-[var(--color-tint-red)]"
-            >
-              <svg
-                className="session-card__control-icon"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
+          ) : (
+            !isTerminal && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onKill?.(session.id);
+                }}
+                aria-label="Terminate session"
+                className="session-card__control session-card__terminate inline-flex shrink-0 cursor-pointer items-center justify-center border border-[color-mix(in_srgb,var(--color-status-error)_35%,transparent)] px-2.5 py-1 text-[11px] text-[var(--color-status-error)] transition-colors hover:border-[var(--color-status-error)] hover:bg-[var(--color-tint-red)]"
               >
-                <path d="M3 6h18" />
-                <path d="M8 6V4h8v2" />
-                <path d="M19 6l-1 14H6L5 6" />
-                <path d="M10 11v6M14 11v6" />
-              </svg>
-            </button>
+                <svg
+                  className="session-card__control-icon"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M3 6h18" />
+                  <path d="M8 6V4h8v2" />
+                  <path d="M19 6l-1 14H6L5 6" />
+                  <path d="M10 11v6M14 11v6" />
+                </svg>
+              </button>
+            )
           )}
         </div>
       </div>

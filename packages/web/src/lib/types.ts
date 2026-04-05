@@ -17,6 +17,10 @@ export type {
   PRState,
 } from "@composio/ao-core/types";
 
+import type { IssueWorkflowPhase } from "@composio/ao-core";
+
+export type { IssueWorkflowPhase };
+
 // Re-export global pause state from shared lib (provider-agnostic state contract)
 export type { GlobalPauseState } from "./global-pause";
 
@@ -75,6 +79,8 @@ export interface DashboardSession {
   lastActivityAt: string;
   pr: DashboardPR | null;
   metadata: Record<string, string>;
+  /** From session metadata `issueWorkflowPhase` when valid (0005); null if absent or unknown. */
+  issueWorkflowPhase: IssueWorkflowPhase | null;
 }
 
 /**
