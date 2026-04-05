@@ -103,6 +103,15 @@ export {
   defaultIssueWorkflowPhaseForSpawn,
 } from "./issue-lifecycle-types.js";
 
+// Trust gate metadata keys + satisfaction values (0006 Option A)
+export type { TrustGateSatisfaction } from "./issue-lifecycle-gates.js";
+export {
+  TRUST_GATE_SATISFACTION_PREFIX,
+  TRUST_GATE_SATISFACTION_VALUES,
+  TRUST_GATE_METADATA_KEY_LIST,
+  trustGateMetadataKey,
+} from "./issue-lifecycle-gates.js";
+
 // Global pause constants and utilities
 export {
   GLOBAL_PAUSE_UNTIL_KEY,
