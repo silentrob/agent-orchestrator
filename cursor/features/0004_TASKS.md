@@ -103,13 +103,19 @@ Derived from `0004_PLAN.md` (approved). No scope beyond IN-SCOPE.
 
 - **Priority:** Medium
 - **Effort:** S
-- **Status:** `not started`
+- **Status:** `complete`
 - **Description:** Add or update `docs/specs/plan-approval-and-orchestrator-handoff.md` with a short **Errata / Supersession** section: 0003-style durable snapshot + session-only UX is superseded by issue-centric gates per 0004; preserve any still-valid bits (e.g. frontmatter ideas) where applicable. If file missing, create stub with errata + link to 0004 specs.
 - **Dependencies:** T02
 - **Files to Change:** `docs/specs/plan-approval-and-orchestrator-handoff.md` (create or update)
 - **Acceptance Criteria:**
   - Errata section references `0004_PLAN.md` / `issue-lifecycle-trust-vector.md`
   - No claim that 0003 APIs exist on current branch unless reintroduced
+
+**Proof of Work:** `docs/specs/plan-approval-and-orchestrator-handoff.md` — **Errata / Supersession (0004)** + “What remains useful” (frontmatter, gate signal, optional durability); **Historical note** explicitly not a current API contract; links to `../../cursor/features/0004_PLAN.md`, `./issue-lifecycle-trust-vector.md`, `./role-typed-artifacts.md`.
+
+**Acceptance Criteria Check-off:** ✓ errata links `0004_PLAN.md` and `issue-lifecycle-trust-vector.md`; ✓ states reverted branches do not ship 0003 APIs unless reintroduced.
+
+**Test Artifacts:** N/A (markdown).
 
 ---
 
