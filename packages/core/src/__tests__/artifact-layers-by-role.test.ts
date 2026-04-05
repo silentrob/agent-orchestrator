@@ -12,6 +12,7 @@ describe("buildPlannerArtifactLayer", () => {
     expect(text).toContain("---");
     expect(text).toMatch(/frontmatter|YAML/i);
     expect(text).toMatch(/requires_approval/);
+    expect(text).toMatch(/pending_approval/);
     expect(text).toMatch(/respawn|already exists|read it first/i);
   });
 
@@ -65,22 +66,31 @@ describe("buildIssueWorkflowPhaseLayer", () => {
     expect(text).toContain(".ao/plan.md");
   });
 
-  it("returns execute placeholder for execute", () => {
+  it("returns execute layer with Trust checklist and PR guidance for execute", () => {
     const text = buildIssueWorkflowPhaseLayer("execute", ctx);
     expect(text).toContain("## Executor phase");
     expect(text).toContain("execute");
     expect(text).toContain("INT-1");
+    expect(text).toMatch(/### Trust checklist/i);
+    expect(text).toMatch(/### Implementation discipline/i);
+    expect(text).toMatch(/### Pull request description/i);
   });
 
-  it("returns validate placeholder for validate", () => {
+  it("returns validate layer with verification and sign-off subsections", () => {
     const text = buildIssueWorkflowPhaseLayer("validate", ctx);
     expect(text).toContain("## Validator phase");
     expect(text).toContain("Trust Vector");
+    expect(text).toMatch(/### Verification evidence/i);
+    expect(text).toMatch(/### Acceptance criteria sign-off/i);
+    expect(text).toMatch(/### CI and Trust Vector/i);
   });
 
-  it("returns reproducer placeholder for reproducer", () => {
+  it("returns reproducer layer with minimality and handoff subsections", () => {
     const text = buildIssueWorkflowPhaseLayer("reproducer", ctx);
     expect(text).toContain("## Reproducer phase");
+    expect(text).toMatch(/### Repro minimality/i);
+    expect(text).toMatch(/### Minimal reproduction/i);
+    expect(text).toMatch(/### Handoff/i);
   });
 
   it("returns empty string for done", () => {

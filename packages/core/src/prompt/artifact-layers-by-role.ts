@@ -41,9 +41,9 @@ ${contextBlock}
 
 Use optional YAML frontmatter between \`---\` lines at the very top, same spirit as feature plans:
 
-- \`status\`: \`draft\` | \`needs_clarification\` | \`approved\` | \`rejected\` (new plans: start \`draft\`).
-- \`requires_approval\`: boolean — for AO POC default **\`false\`** unless the user or orchestrator explicitly wants a human review gate before execution. If \`true\`, note that downstream automation should check the header (when policy exists).
-- \`feature_number\`, \`feature_name\`, \`created_at\`, \`reviewers\` — set when known; use ISO8601 for dates.
+- \`status\`: \`draft\` | \`needs_clarification\` | \`pending_approval\` | \`approved\` | \`rejected\`. **New plans:** start with **\`pending_approval\`** (not yet human-approved). Move to **\`approved\`** only after explicit human/orchestrator sign-off. Use \`draft\` while the plan is still being written; use \`needs_clarification\` when blocked on questions.
+- \`requires_approval\`: boolean — default **\`true\`** for new plans so execution stays gated on **manual approval** unless the orchestrator explicitly waives the gate (\`false\`).
+- \`feature_number\`, \`feature_name\`, \`created_at\`, \`reviewers\`, \`approved_at\`, \`approved_by\` — set when known; use ISO8601 for dates.
 
 After the closing \`---\`, the markdown body should follow the sections below.
 
@@ -73,7 +73,7 @@ After the closing \`---\`, the markdown body should follow the sections below.
 ### HARD GATE (planner vs execution)
 
 - Your job is the **plan artifact** in \`.ao/plan.md\`. Do **not** generate implementation task files, code, or land an **implementation PR** as this planner session unless the orchestrator explicitly directs otherwise.
-- Prefer **\`status: draft\`** until a human approves (orchestrator may later align with \`feature_tasks\` / execution commands). Downstream commands should **abort** if they require \`status: approved\` and the header is not approved — when that policy is in use.
+- Prefer **\`status: pending_approval\`** with **\`requires_approval: true\`** when the plan is ready for review. Downstream executor sessions and automation should treat **\`status: approved\`** (and satisfied Trust Vector gates when policy exists) as the signal to implement — not \`pending_approval\` or \`draft\`.
 
 ### PLANNING STEPS (structure the markdown body)
 
@@ -99,7 +99,7 @@ If the request is ambiguous after initial research, add a \`## Clarifying Questi
 - **Reference Proofs** — file:line or short excerpts.
 - **Future Work (Non-Blocking)** — if any.
 - **Review Checklist** — e.g. scope respected, no invented APIs, Deltas documented, data layer called out.
-- **How to Approve** — e.g. set \`status: approved\`, \`approved_at\`, \`approved_by\` in frontmatter, or explicit orchestrator approval phrase.
+- **How to Approve** — human sets frontmatter to \`status: approved\`, \`requires_approval: false\` (optional), plus \`approved_at\` / \`approved_by\` when recording sign-off; or leaves an explicit orchestrator approval comment on the issue.
 
 ### What you must not do as planner
 
@@ -113,8 +113,8 @@ If the request is ambiguous after initial research, add a \`## Clarifying Questi
 }
 
 /**
- * Phase-specific L4.5 content for issue-backed workflows (0005).
- * `plan` delegates to {@link buildPlannerArtifactLayer}; other phases use thin placeholders until full L4.5b/c exist.
+ * Phase-specific L4.5 content for issue-backed workflows (0005/0006).
+ * `plan` delegates to {@link buildPlannerArtifactLayer}; other phases use substantive Trust-aligned layers.
  */
 export function buildIssueWorkflowPhaseLayer(
   phase: IssueWorkflowPhase,
@@ -124,36 +124,88 @@ export function buildIssueWorkflowPhaseLayer(
     case "plan":
       return buildPlannerArtifactLayer(ctx);
     case "execute":
-      return buildExecutorPhasePlaceholder(ctx);
+      return buildExecutorArtifactLayer(ctx);
     case "validate":
-      return buildValidatorPhasePlaceholder(ctx);
+      return buildValidatorArtifactLayer(ctx);
     case "reproducer":
-      return buildReproducerPhasePlaceholder(ctx);
+      return buildReproducerArtifactLayer(ctx);
     case "done":
       return "";
   }
 }
 
-function buildExecutorPhasePlaceholder(ctx: PlannerArtifactLayerContext): string {
+function buildExecutorArtifactLayer(ctx: PlannerArtifactLayerContext): string {
   const issueHint = ctx.issueId ? `Issue **${ctx.issueId}** — ` : "";
   return `## Executor phase (Agent Orchestrator)
 
 ${issueHint}You are in the **execute** workflow phase for project \`${ctx.projectId}\`.
-Implement the approved plan and in-scope tasks; do not rely on or invent APIs outside the project’s API Contract Table. Prefer small, reviewable changes.`;
+Implement the **approved** plan and **IN-SCOPE** tasks only. Treat the codebase as the API-TRUTH source: verify exports and signatures before use; do not rely on or invent APIs outside the project’s **API Contract Table** (or an accepted Delta Proposal).
+
+### Trust checklist
+
+- **Plan alignment** — If \`.ao/plan.md\` exists, follow its IN-SCOPE / OUT-OF-SCOPE and **Reference Proof** rows; do not silently expand scope.
+- **Gates** — When orchestrator policy applies, downstream phases may depend on **Trust Vector** gate metadata (e.g. plan approval, CI green). Do not bypass documented preconditions.
+- **No invention** — Missing API? Add a Delta Proposal in the plan or PR description; do not call hypothetical methods.
+
+### Implementation discipline
+
+- Prefer **small, reviewable** changes; one concern per commit when practical.
+- Match existing patterns (imports, tests, error handling) in touched modules.
+- Leave **Verification** evidence you can cite in the PR (commands run, test output scope).
+
+### Pull request description (Trust Vector)
+
+When you open a PR (\`gh pr create\`), the body must **not** be only a closing keyword (e.g. a single \`Closes #N\` line). Include:
+- **Summary** — what changed and why (bullet list ok).
+- **Verification** — what you ran (tests, manual checks, commands) and results.
+- **Trust / risk** — anything reviewers should know (scope limits, follow-ups, known gaps).
+- **Issue link** — end with \`Closes #N\` / \`Fixes #N\` **on its own line** so GitHub still auto-closes the issue, after the narrative above.`;
 }
 
-function buildValidatorPhasePlaceholder(ctx: PlannerArtifactLayerContext): string {
+function buildValidatorArtifactLayer(ctx: PlannerArtifactLayerContext): string {
   const issueHint = ctx.issueId ? `Issue **${ctx.issueId}** — ` : "";
   return `## Validator phase (Agent Orchestrator)
 
 ${issueHint}You are in the **validate** workflow phase for project \`${ctx.projectId}\`.
-Focus on verification, CI alignment, and sign-off against acceptance criteria and the Trust Vector where applicable.`;
+Your job is **independent verification** and **sign-off** against acceptance criteria and the Trust Vector — not to re-implement the fix unless asked.
+
+### Verification evidence
+
+- **What to record** — Commands run (e.g. test targets), CI result for the candidate commit/PR, and any manual checks (steps, expected vs actual).
+- **Gaps** — State clearly what was **not** exercised (platforms, edge paths, flaky areas) so risk is visible.
+- **Artifacts** — Prefer pointers to logs, test names, or PR checks rather than vague “looks good.”
+
+### Acceptance criteria sign-off
+
+- Map each **IN-SCOPE** acceptance item from the plan or issue to **pass / fail / blocked** with a one-line rationale.
+- If scope drifted, call it out and separate **must-fix** from **follow-up** (Future Work).
+
+### CI and Trust Vector
+
+- Treat **green CI** on the validation target as necessary but not always sufficient; align with project’s required checks.
+- Where metadata or policy tracks gate satisfaction, do not contradict recorded state without investigation.`;
 }
 
-function buildReproducerPhasePlaceholder(ctx: PlannerArtifactLayerContext): string {
+function buildReproducerArtifactLayer(ctx: PlannerArtifactLayerContext): string {
   const issueHint = ctx.issueId ? `Issue **${ctx.issueId}** — ` : "";
   return `## Reproducer phase (Agent Orchestrator)
 
 ${issueHint}You are in the **reproducer** workflow phase for project \`${ctx.projectId}\`.
-Produce a minimal, reliable reproduction of the issue before downstream planning or implementation.`;
+Produce a **minimal, reliable** reproduction **before** broad planning or implementation so the team agrees on **what is broken** and **how to observe it**.
+
+### Repro minimality
+
+- **Smallest surface** — Fewest files, steps, and dependencies needed to trigger the bug; remove unrelated edits and features.
+- **Determinism** — If order or timing matters, say so; prefer a script or fixed sequence over vague “sometimes.”
+- **Baseline** — Note **expected** vs **actual** with concrete signals (error text, exit code, UI state).
+
+### Minimal reproduction
+
+- Use numbered steps from a clean or documented starting point (branch, config, env vars).
+- Capture **environment** when relevant (runtime versions, OS, feature flags) — enough for someone else to repeat.
+- If full prod repro is impossible, document the **closest faithful** substitute and its limits.
+
+### Handoff
+
+- Store or link the repro artifact (script, fixture, session log) where the planner and executor can find it; avoid “works on my machine” without traceability.`;
 }

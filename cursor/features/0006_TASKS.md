@@ -166,7 +166,7 @@ Derived from [`0006_PLAN.md`](./0006_PLAN.md). **Data layer:** **Option A** — 
 
 - **Priority:** Medium
 - **Effort:** M
-- **Status:** `not started`
+- **Status:** `complete`
 - **Description:** Expand `buildIssueWorkflowPhaseLayer` branches for `execute`, `validate`, `reproducer` with Trust-aligned content (checklist, verification evidence, repro minimality) per plan §b; keep file under team line limits or split helpers in same folder. Avoid duplicating entire `BASE_AGENT_PROMPT`.
 - **Dependencies:** none (soft: T01 for naming consistency in prose)
 - **Files to Change:** `packages/core/src/prompt/artifact-layers-by-role.ts`; `packages/core/src/__tests__/artifact-layers-by-role.test.ts`; `packages/core/src/__tests__/prompt-builder.test.ts` if strings change
@@ -175,6 +175,12 @@ Derived from [`0006_PLAN.md`](./0006_PLAN.md). **Data layer:** **Option A** — 
   - `pnpm --filter @composio/ao-core test` for touched tests passes
 
 **API entries used:** `buildIssueWorkflowPhaseLayer`, `buildPlannerArtifactLayer`; `buildPrompt` indirect.
+
+**Proof of Work:** `artifact-layers-by-role.ts` — `buildExecutorArtifactLayer`, `buildValidatorArtifactLayer`, `buildReproducerArtifactLayer` (replacing placeholders) with Trust checklist, PR discipline, verification evidence / sign-off / CI, repro minimality / minimal reproduction / handoff.
+
+**Acceptance Criteria Check-off:** ✓ subsection headings per phase in tests; ✓ core tests green.
+
+**Test Artifacts:** `artifact-layers-by-role.test.ts` — execute/validate/reproducer describe cases assert `###` headings.
 
 ---
 
