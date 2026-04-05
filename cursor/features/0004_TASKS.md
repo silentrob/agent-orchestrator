@@ -123,13 +123,19 @@ Derived from `0004_PLAN.md` (approved). No scope beyond IN-SCOPE.
 
 - **Priority:** Medium
 - **Effort:** S
-- **Status:** `not started`
+- **Status:** `complete`
 - **Description:** Add `docs/specs/issue-lifecycle-state-persistence.md` sketching where issue phase and gate state may live (session metadata keys vs issue-index file vs tracker labels), tradeoffs, and **no commitment** to full implementation in one PR — per 0004 IN-SCOPE §2.
 - **Dependencies:** T02
 - **Files to Change:** `docs/specs/issue-lifecycle-state-persistence.md` (new)
 - **Acceptance Criteria:**
   - Enumerates at least two storage options with pros/cons
   - References `Session.metadata` as one candidate (`types.ts` `Session`)
+
+**Proof of Work:** `docs/specs/issue-lifecycle-state-persistence.md` — Candidate 1 session `metadata` + `updateMetadata` mention; Candidate 2 issue-index file; optional Candidate 3 tracker labels; links to `types.ts` `Session`, `issue-lifecycle-trust-vector.md`, `0004_PLAN.md`.
+
+**Acceptance Criteria Check-off:** ✓ ≥2 options with pros/cons tables; ✓ `Session.metadata` / `packages/core/src/types.ts` cited.
+
+**Test Artifacts:** N/A (markdown).
 
 ---
 
