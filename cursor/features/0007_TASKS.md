@@ -91,7 +91,7 @@ Derived from [`0007_PLAN.md`](./0007_PLAN.md). **MVP:** approve plan frontmatter
 
 - **Priority:** High
 - **Effort:** M
-- **Status:** `not started`
+- **Status:** `complete`
 - **Description:** Add `packages/cli/src/commands/plan.ts` with `registerPlan(program)`: subcommand `approve <session>` (loadConfig, getSessionManager, get session, require workspacePath, call `approvePlanArtifactInWorkspace` with `planArtifactRelPath` from metadata); subcommand `send <session> [message...]` delegating to `sessionManager.send` when session exists (mirror `registerSend` options where practical: `-f`/`--file`). Register in `packages/cli/src/index.ts`.
 - **Dependencies:** T01
 - **Files to Change:** `packages/cli/src/commands/plan.ts` (new); `packages/cli/src/index.ts`; `packages/cli/__tests__/commands/plan.test.ts` (new)
@@ -101,6 +101,13 @@ Derived from [`0007_PLAN.md`](./0007_PLAN.md). **MVP:** approve plan frontmatter
   - `pnpm --filter @composio/ao-cli test` passes
 
 **API entries used:** `loadConfig`, `createSessionManager` → `get`, `send`; T01 `approvePlanArtifactInWorkspace`.
+
+- **Proof of work:** `packages/cli/src/commands/plan.ts` — `registerPlan` with `plan approve` (`--approved-by`), `plan send` (`-f`/`--file`); `packages/cli/src/index.ts` — `registerPlan(program)`. Tests mock session manager + `approvePlanArtifactInWorkspace` to assert wiring.
+- **Acceptance Criteria Check-off:**
+  - ✓ Approve path: tests assert `approvePlanArtifactInWorkspace` called with workspace, `planArtifactRelPath`, optional `approvedBy`; missing session/workspace exit 1 (file update covered in core T01)
+  - ✓ Send path: tests assert `sessionManager.send` with inline and `-f` file body
+  - ✓ `pnpm --filter @composio/ao-cli test` passes
+- **Test Artifacts:** `packages/cli/__tests__/commands/plan.test.ts` — `describe("plan command")` (approve + send, including `-f`).
 
 ---
 
