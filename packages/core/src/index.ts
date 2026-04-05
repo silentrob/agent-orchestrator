@@ -61,7 +61,10 @@ export type { LifecycleManagerDeps } from "./lifecycle-manager.js";
 export { buildPrompt, BASE_AGENT_PROMPT } from "./prompt-builder.js";
 export type { PromptBuildConfig } from "./prompt-builder.js";
 
-export { buildPlannerArtifactLayer } from "./prompt/artifact-layers-by-role.js";
+export {
+  buildPlannerArtifactLayer,
+  buildIssueWorkflowPhaseLayer,
+} from "./prompt/artifact-layers-by-role.js";
 export type { PlannerArtifactLayerContext } from "./prompt/artifact-layers-by-role.js";
 
 // Decomposer — LLM-driven task decomposition

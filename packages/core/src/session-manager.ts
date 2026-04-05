@@ -55,7 +55,6 @@ import {
   reserveSessionId,
 } from "./metadata.js";
 import { buildPrompt } from "./prompt-builder.js";
-import { buildPlannerArtifactLayer } from "./prompt/artifact-layers-by-role.js";
 import {
   ISSUE_WORKFLOW_PHASE_METADATA_KEY,
   defaultIssueWorkflowPhaseForSpawn,
@@ -1060,6 +1059,12 @@ export function createSessionManager(deps: SessionManagerDeps): OpenCodeSessionM
       }
     }
 
+    const issueWorkflowPhaseForPrompt =
+      defaultIssueWorkflowPhaseForSpawn({
+        issueId: spawnConfig.issueId,
+        workerRole: spawnConfig.workerRole,
+      }) ?? (spawnConfig.workerRole === "planner" ? "plan" : undefined);
+
     const basePrompt = buildPrompt({
       project,
       projectId: spawnConfig.projectId,
@@ -1068,16 +1073,11 @@ export function createSessionManager(deps: SessionManagerDeps): OpenCodeSessionM
       userPrompt: spawnConfig.prompt,
       lineage: spawnConfig.lineage,
       siblings: spawnConfig.siblings,
+      issueWorkflowPhase: issueWorkflowPhaseForPrompt,
     });
 
     let composedPrompt = basePrompt;
-    if (spawnConfig.workerRole === "planner") {
-      const plannerLayer = buildPlannerArtifactLayer({
-        projectId: spawnConfig.projectId,
-        issueId: spawnConfig.issueId,
-        issueContext,
-      });
-      composedPrompt = `${basePrompt}\n\n${plannerLayer}`;
+    if (issueWorkflowPhaseForPrompt === "plan") {
       const defaultPlanRel = ".ao/plan.md";
       const planAbsPath = join(workspacePath, defaultPlanRel);
       if (existsSync(planAbsPath)) {

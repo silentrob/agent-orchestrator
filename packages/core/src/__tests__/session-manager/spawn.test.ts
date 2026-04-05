@@ -1056,6 +1056,9 @@ describe("spawn", () => {
       const raw = readMetadataRaw(sessionsDir, session.id);
       expect(raw?.[ISSUE_WORKFLOW_PHASE_METADATA_KEY]).toBe("execute");
       expect(session.metadata[ISSUE_WORKFLOW_PHASE_METADATA_KEY]).toBe("execute");
+
+      const launchCfg = vi.mocked(mockAgent.getLaunchCommand).mock.calls.at(-1)?.[0];
+      expect(launchCfg?.prompt).toContain("## Executor phase");
     });
 
     it("sets issueWorkflowPhase to plan for planner", async () => {

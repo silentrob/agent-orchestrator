@@ -4,6 +4,8 @@
  * Aligned with `.cursor/commands/feature_plan.md` (GUARDRAILS, SCOPE, Deltas, steps).
  */
 
+import type { IssueWorkflowPhase } from "../issue-lifecycle-types.js";
+
 export interface PlannerArtifactLayerContext {
   projectId: string;
   issueId?: string;
@@ -108,4 +110,50 @@ If the request is ambiguous after initial research, add a \`## Clarifying Questi
 
 - If **\`.ao/plan.md\` already exists**, **read it first**, preserve valid frontmatter, and **update** sections (and \`status\` if appropriate). Do not blindly overwrite the whole file.
 - Treat the plan file as continuity for humans and for downstream executor sessions.`;
+}
+
+/**
+ * Phase-specific L4.5 content for issue-backed workflows (0005).
+ * `plan` delegates to {@link buildPlannerArtifactLayer}; other phases use thin placeholders until full L4.5b/c exist.
+ */
+export function buildIssueWorkflowPhaseLayer(
+  phase: IssueWorkflowPhase,
+  ctx: PlannerArtifactLayerContext,
+): string {
+  switch (phase) {
+    case "plan":
+      return buildPlannerArtifactLayer(ctx);
+    case "execute":
+      return buildExecutorPhasePlaceholder(ctx);
+    case "validate":
+      return buildValidatorPhasePlaceholder(ctx);
+    case "reproducer":
+      return buildReproducerPhasePlaceholder(ctx);
+    case "done":
+      return "";
+  }
+}
+
+function buildExecutorPhasePlaceholder(ctx: PlannerArtifactLayerContext): string {
+  const issueHint = ctx.issueId ? `Issue **${ctx.issueId}** — ` : "";
+  return `## Executor phase (Agent Orchestrator)
+
+${issueHint}You are in the **execute** workflow phase for project \`${ctx.projectId}\`.
+Implement the approved plan and in-scope tasks; do not rely on or invent APIs outside the project’s API Contract Table. Prefer small, reviewable changes.`;
+}
+
+function buildValidatorPhasePlaceholder(ctx: PlannerArtifactLayerContext): string {
+  const issueHint = ctx.issueId ? `Issue **${ctx.issueId}** — ` : "";
+  return `## Validator phase (Agent Orchestrator)
+
+${issueHint}You are in the **validate** workflow phase for project \`${ctx.projectId}\`.
+Focus on verification, CI alignment, and sign-off against acceptance criteria and the Trust Vector where applicable.`;
+}
+
+function buildReproducerPhasePlaceholder(ctx: PlannerArtifactLayerContext): string {
+  const issueHint = ctx.issueId ? `Issue **${ctx.issueId}** — ` : "";
+  return `## Reproducer phase (Agent Orchestrator)
+
+${issueHint}You are in the **reproducer** workflow phase for project \`${ctx.projectId}\`.
+Produce a minimal, reliable reproduction of the issue before downstream planning or implementation.`;
 }

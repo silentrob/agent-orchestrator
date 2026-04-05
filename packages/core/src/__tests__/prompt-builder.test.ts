@@ -202,6 +202,63 @@ describe("buildPrompt", () => {
     expect(result).toContain("ci-failed");
     expect(result).not.toContain("approved-and-green");
   });
+
+  it("appends planner phase layer when issueWorkflowPhase is plan", () => {
+    const result = buildPrompt({
+      project,
+      projectId: "test-app",
+      issueId: "INT-99",
+      issueWorkflowPhase: "plan",
+    });
+    expect(result).toContain("## Planner role");
+    expect(result).toContain(".ao/plan.md");
+  });
+
+  it("appends execute phase placeholder when issueWorkflowPhase is execute", () => {
+    const result = buildPrompt({
+      project,
+      projectId: "test-app",
+      issueId: "INT-100",
+      issueWorkflowPhase: "execute",
+    });
+    expect(result).toContain("## Executor phase");
+    expect(result).toContain("execute");
+  });
+
+  it("appends validate phase placeholder when issueWorkflowPhase is validate", () => {
+    const result = buildPrompt({
+      project,
+      projectId: "test-app",
+      issueId: "INT-101",
+      issueWorkflowPhase: "validate",
+    });
+    expect(result).toContain("## Validator phase");
+  });
+
+  it("does not append a phase block for done", () => {
+    const result = buildPrompt({
+      project,
+      projectId: "test-app",
+      issueId: "INT-102",
+      issueWorkflowPhase: "done",
+    });
+    expect(result).not.toContain("## Executor phase");
+    expect(result).not.toContain("## Planner role");
+  });
+
+  it("places userPrompt after issue workflow phase layer", () => {
+    const result = buildPrompt({
+      project,
+      projectId: "test-app",
+      issueId: "INT-103",
+      issueWorkflowPhase: "execute",
+      userPrompt: "Custom tail instruction.",
+    });
+    const execIdx = result.indexOf("## Executor phase");
+    const userIdx = result.indexOf("Custom tail instruction.");
+    expect(execIdx).toBeGreaterThan(-1);
+    expect(userIdx).toBeGreaterThan(execIdx);
+  });
 });
 
 describe("BASE_AGENT_PROMPT", () => {

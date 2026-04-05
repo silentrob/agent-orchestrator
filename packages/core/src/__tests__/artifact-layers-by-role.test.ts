@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { buildPlannerArtifactLayer } from "../prompt/artifact-layers-by-role.js";
+import {
+  buildPlannerArtifactLayer,
+  buildIssueWorkflowPhaseLayer,
+} from "../prompt/artifact-layers-by-role.js";
 
 describe("buildPlannerArtifactLayer", () => {
   it("returns a non-empty string with plan path, frontmatter guidance, and respawn guidance", () => {
@@ -50,5 +53,37 @@ describe("buildPlannerArtifactLayer", () => {
     const text = buildPlannerArtifactLayer({ projectId: "p" });
     expect(text).toContain("implementation PR");
     expect(text).toMatch(/not.*open.*implementation PR/i);
+  });
+});
+
+describe("buildIssueWorkflowPhaseLayer", () => {
+  const ctx = { projectId: "my-app", issueId: "INT-1" };
+
+  it("delegates plan to buildPlannerArtifactLayer", () => {
+    const text = buildIssueWorkflowPhaseLayer("plan", ctx);
+    expect(text).toContain("## Planner role");
+    expect(text).toContain(".ao/plan.md");
+  });
+
+  it("returns execute placeholder for execute", () => {
+    const text = buildIssueWorkflowPhaseLayer("execute", ctx);
+    expect(text).toContain("## Executor phase");
+    expect(text).toContain("execute");
+    expect(text).toContain("INT-1");
+  });
+
+  it("returns validate placeholder for validate", () => {
+    const text = buildIssueWorkflowPhaseLayer("validate", ctx);
+    expect(text).toContain("## Validator phase");
+    expect(text).toContain("Trust Vector");
+  });
+
+  it("returns reproducer placeholder for reproducer", () => {
+    const text = buildIssueWorkflowPhaseLayer("reproducer", ctx);
+    expect(text).toContain("## Reproducer phase");
+  });
+
+  it("returns empty string for done", () => {
+    expect(buildIssueWorkflowPhaseLayer("done", ctx)).toBe("");
   });
 });

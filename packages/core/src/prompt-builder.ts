@@ -12,6 +12,8 @@
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { buildIssueWorkflowPhaseLayer } from "./prompt/artifact-layers-by-role.js";
+import type { IssueWorkflowPhase } from "./issue-lifecycle-types.js";
 import type { ProjectConfig } from "./types.js";
 
 // =============================================================================
@@ -64,6 +66,12 @@ export interface PromptBuildConfig {
 
   /** Decomposition context — sibling task descriptions (from decomposer) */
   siblings?: string[];
+
+  /**
+   * Issue workflow phase (0005) — when set, appends a single phase-appropriate L4.5 block
+   * (planner layer for `plan`, thin placeholders for other phases). Only used at launch / explicit rebuild.
+   */
+  issueWorkflowPhase?: IssueWorkflowPhase;
 }
 
 // =============================================================================
@@ -170,7 +178,9 @@ export function buildPrompt(config: PromptBuildConfig): string {
     const hierarchy = config.lineage.map((desc, i) => `${"  ".repeat(i)}${i}. ${desc}`);
     // Add current task marker using issueId or last lineage entry
     const currentLabel = config.issueId ?? "this task";
-    hierarchy.push(`${"  ".repeat(config.lineage.length)}${config.lineage.length}. ${currentLabel}  <-- (this task)`);
+    hierarchy.push(
+      `${"  ".repeat(config.lineage.length)}${config.lineage.length}. ${currentLabel}  <-- (this task)`,
+    );
 
     sections.push(
       `## Task Hierarchy\nThis task is part of a larger decomposed plan. Your place in the hierarchy:\n\n\`\`\`\n${hierarchy.join("\n")}\n\`\`\`\n\nStay focused on YOUR specific task. Do not implement functionality that belongs to other tasks in the hierarchy.`,
@@ -182,6 +192,17 @@ export function buildPrompt(config: PromptBuildConfig): string {
     sections.push(
       `## Parallel Work\nSibling tasks being worked on in parallel:\n${siblingLines.join("\n")}\n\nDo not duplicate work that sibling tasks handle. If you need interfaces/types from siblings, define reasonable stubs.`,
     );
+  }
+
+  if (config.issueWorkflowPhase) {
+    const phaseBlock = buildIssueWorkflowPhaseLayer(config.issueWorkflowPhase, {
+      projectId: config.projectId,
+      issueId: config.issueId,
+      issueContext: config.issueContext,
+    });
+    if (phaseBlock.trim().length > 0) {
+      sections.push(phaseBlock);
+    }
   }
 
   // Explicit user prompt (appended last, highest priority)

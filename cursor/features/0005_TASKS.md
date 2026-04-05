@@ -28,7 +28,8 @@ Derived from [`0005_PLAN.md`](./0005_PLAN.md). Executes **runtime** work after *
 | File                                         | Export                                                                             | Notes         |
 | -------------------------------------------- | ---------------------------------------------------------------------------------- | ------------- |
 | `packages/core/src/issue-lifecycle-types.ts` | `IssueWorkflowPhase`, `ISSUE_WORKFLOW_PHASES`, `TrustGateKind`, `TRUST_GATE_KINDS` | 0004          |
-| `packages/core/src/prompt-builder.ts`        | `buildPrompt`, `PromptBuildConfig`                                                 | extend in T02 |
+| `packages/core/src/prompt-builder.ts`        | `buildPrompt`, `PromptBuildConfig` (+ `issueWorkflowPhase?`)                         | T02           |
+| `packages/core/src/prompt/artifact-layers-by-role.ts` | `buildIssueWorkflowPhaseLayer`, `buildPlannerArtifactLayer`               | T02           |
 | `packages/core/src/types.ts`                 | `Session`, `SessionSpawnConfig`                                                    | metadata      |
 | `packages/core/src/metadata.ts`              | `updateMetadata`                                                                   | T01           |
 | `packages/core/src/session-manager.ts`       | `createSessionManager`, `spawn`                                                    | T01           |
@@ -63,13 +64,19 @@ Derived from [`0005_PLAN.md`](./0005_PLAN.md). Executes **runtime** work after *
 
 - **Priority:** High
 - **Effort:** M
-- **Status:** `not started`
+- **Status:** `complete`
 - **Description:** Add optional `issueWorkflowPhase` to `PromptBuildConfig`. When set, append phase-appropriate content: at minimum existing `buildPlannerArtifactLayer` when phase is `plan`; thin placeholder sections for `execute` / `validate` if full L4.5b/c do not exist yet. Do not duplicate entire planner layer on every poll — only in prompt build path used at launch / explicit rebuild.
 - **Dependencies:** T01
 - **Files to Change:** `packages/core/src/prompt-builder.ts`; wire from `session-manager` spawn only where `composedPrompt` is built (align with existing planner branch); `packages/core/src/__tests__/`
 - **Acceptance Criteria:**
   - Typecheck + new/updated unit tests for `buildPrompt` with phase
   - No change to unrelated prompt layers
+
+**Proof of Work:** `PromptBuildConfig.issueWorkflowPhase`; `buildPrompt` calls `buildIssueWorkflowPhaseLayer` (after lineage/siblings, before `userPrompt`); `buildIssueWorkflowPhaseLayer` in `artifact-layers-by-role.ts` (plan→planner layer, execute/validate/reproducer placeholders, `done`→empty); spawn passes `issueWorkflowPhaseForPrompt` from `defaultIssueWorkflowPhaseForSpawn` with planner-without-issue fallback to `plan`; “Existing plan on disk” only when phase is `plan`.
+
+**Acceptance Criteria Check-off:** ✓ typecheck + unit tests; ✓ base/config/rules/lineage/siblings unchanged except new optional phase block.
+
+**Test Artifacts:** `prompt-builder.test.ts` — phase plan/execute/validate/done + ordering; `artifact-layers-by-role.test.ts` — `buildIssueWorkflowPhaseLayer`; `spawn.test.ts` — execute spawn prompt contains `## Executor phase`.
 
 ---
 
