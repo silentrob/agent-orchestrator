@@ -21,6 +21,10 @@ Derived from [`0007_PLAN.md`](./0007_PLAN.md). **MVP:** approve plan frontmatter
 | 0005 planner panel (read-only plan)        | **Write** approval + **send** under `ao plan`; web approve parity |
 | 0006 `human_plan_approval` via frontmatter | **Operator-driven** `status: approved` without hand-editing file  |
 
+## Relationship to 0008 (phase advance)
+
+[`0008_PLAN.md`](./0008_PLAN.md) adds **`ao session advance`** for moving **`issueWorkflowPhase`** on the **same** session when gates pass. **`ao plan approve`** / **`ao plan send`** are **not** superseded: approve only writes plan frontmatter; send only messages the agent. Operators use approve (and gate satisfaction) **before** advance when transitioning into **execute** under `requireIssueLifecycleGates`.
+
 ---
 
 ## API Contract Table (verify signatures before each task)

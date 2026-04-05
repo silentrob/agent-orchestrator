@@ -30,15 +30,20 @@ function planArtifactRelPathFromMetadata(metadata: Record<string, string>): stri
 
 /**
  * `ao plan approve` / `ao plan send` — plan artifact approval and planner feedback (0007).
+ * See AGENTS.md: these commands do not change `issueWorkflowPhase`; use `ao session advance` for phase moves (0008).
  */
 export function registerPlan(program: Command): void {
   const plan = program
     .command("plan")
-    .description("Plan artifact helpers for planner sessions (approve, send)");
+    .description(
+      "Plan artifact helpers (approve, send). Complements `ao session advance` for workflow phase moves; approve/send do not update issue phase metadata.",
+    );
 
   plan
     .command("approve")
-    .description("Mark the plan artifact as human-approved (updates YAML frontmatter)")
+    .description(
+      "Mark the plan artifact as human-approved (YAML frontmatter). Satisfies Trust Vector plan-approval gates when configured; does not change workflow phase—use `ao session advance --phase <phase>` to move the same session to execute/validate/done when gates allow.",
+    )
     .argument("<session>", "Session id")
     .option("--approved-by <name>", "Optional approver name (stored in frontmatter)")
     .action(async (sessionId: string, opts: { approvedBy?: string }) => {
@@ -70,7 +75,9 @@ export function registerPlan(program: Command): void {
 
   plan
     .command("send")
-    .description("Send a message to a session (same path as ao send when AO-managed)")
+    .description(
+      "Send a message to a session (same path as `ao send`). Operator feedback only; use `ao session advance` to change workflow phase, not this command.",
+    )
     .argument("<session>", "Session name")
     .argument("[message...]", "Message to send")
     .option("-f, --file <path>", "Send contents of a file instead")

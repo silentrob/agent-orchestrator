@@ -202,7 +202,7 @@ Derived from [`0008_PLAN.md`](./0008_PLAN.md) (approved). **North star:** `spawn
 
 - **Priority:** Medium
 - **Effort:** S
-- **Status:** `not started`
+- **Status:** `complete`
 - **Description:** After `advancePhase` exists (T03–T04), **review** whether the 0007 CLI model still fits: `ao plan approve` (writes `status: approved` via `approvePlanArtifactInWorkspace`) and `ao plan send` (delegates to `SessionManager.send`) vs **`ao session advance`** (phase + gates + composed prompt). Produce a short **operator story**: when to use approve/send only, when advance is required, and whether any overlap should be **documented**, **deprecated**, or **wired** (e.g. optional `advance` pre-step that assumes approved plan). Update `registerPlan` help text and `AGENTS.md` / config-help if the story changes. No large refactor unless review finds redundancy worth a follow-up task.
 - **Dependencies:** T03, T04, T06 (doc baseline for advance)
 - **Files to Change:** `packages/cli/src/commands/plan.ts` (descriptions/help); `AGENTS.md`; optional note in `cursor/features/0007_TASKS.md` or 0007 plan cross-link
@@ -212,6 +212,17 @@ Derived from [`0008_PLAN.md`](./0008_PLAN.md) (approved). **North star:** `spawn
   - No broken workflows: approve→advance or approve-only paths still coherent with `requireIssueLifecycleGates`
 
 **API entries used:** `registerPlan`, `approvePlanArtifactInWorkspace`, `SessionManager.send`, **PROPOSED** `advancePhase` (post-T03).
+
+- **Conclusion (review):**
+  - **0007 commands stay first-class:** `ao plan approve` only mutates plan YAML; `ao plan send` only calls `send`. Neither updates `issueWorkflowPhase`. **`ao session advance`** is the dedicated phase transition + gates + composed prompt.
+  - **Overlap:** Documented, not deprecated. Optional automation (approve → advance) is **future work** (see 0008 Future work); no CLI wiring in T07.
+  - **Operator story:** With `requireIssueLifecycleGates`, approve the plan (CLI/web) so human-plan / artifact gates can clear, then **`ao session advance --phase execute`** on the same session when moving that worker into execute; or keep approve-only / planner-only workflows without advance when phase metadata is not in use.
+- **Proof of work:** `plan.ts`: `plan` / `approve` / `send` descriptions + file comment. `AGENTS.md`: paragraph under planner workflow bridging approve/send vs advance. `0007_TASKS.md`: “Relationship to 0008” subsection with link to `0008_PLAN.md`.
+- **Acceptance Criteria Check-off:**
+  - ✓ Conclusion bullets (this task + AGENTS.md)
+  - ✓ Help strings reference `ao session advance` where applicable
+  - ✓ Approve→advance story coherent with gates (documented only; no behavior change)
+- **Test Artifacts:** n/a (help/description-only); `pnpm --filter @composio/ao-cli typecheck` run
 
 ---
 

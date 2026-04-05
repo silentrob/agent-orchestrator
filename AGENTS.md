@@ -21,6 +21,8 @@ pnpm format                             # Prettier format
 - **`ao plan approve <session>`** — Marks the session plan file (default `.ao/plan.md`, or `planArtifactRelPath` in metadata) as human-approved by updating YAML frontmatter (`status: approved`).
 - **`ao plan send <session> [message…]`** — Same delivery path as **`ao send`**; use for feedback to a planner session under the `plan` subcommand.
 
+These commands remain **first-class** alongside phase advance: they only touch the plan file or deliver chat; they **do not** set `issueWorkflowPhase`. With **`requireIssueLifecycleGates`**, a typical path is **approve the plan** (CLI, web, or equivalent) so Trust Vector gates can clear, then **`ao session advance <session> --phase execute`** (or spawn a separate executor session if that is how the project is modeled). **`ao plan send`** does not replace **`ao session advance`** for phase changes.
+
 ## CLI: issue workflow phase (advance)
 
 - **`ao spawn`** creates a **new** worker session (metadata sets initial `issueWorkflowPhase` when an issue is present).
