@@ -1,54 +1,15 @@
 /**
  * Approve plan artifact frontmatter in a workspace (0007).
- * Path containment matches `packages/web/src/lib/plan-artifact.ts` `resolvePlanArtifactPath`.
+ * Path containment uses `resolvePlanArtifactPath` from `./plan-artifact-path.js`.
  */
 
-import { existsSync, readFileSync, realpathSync } from "node:fs";
-import { relative, resolve } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
 
 import { atomicWriteFileSync } from "./atomic-write.js";
-
-const DEFAULT_PLAN_REL = ".ao/plan.md";
+import { resolvePlanArtifactPath } from "./plan-artifact-path.js";
 
 export interface ApprovePlanArtifactResult {
   path: string;
-}
-
-/**
- * Resolves the absolute path to the plan file if it stays inside `workspacePath`
- * (after realpath). Rejects traversal (`..`), absolute `rel`, and empty relative result.
- * Duplicated from web `resolvePlanArtifactPath` until Delta §2 consolidates.
- */
-function resolvePlanArtifactPath(
-  workspacePath: string,
-  relPathFromMetadata: string | undefined,
-): string | null {
-  const raw = (relPathFromMetadata?.trim() || DEFAULT_PLAN_REL).replace(/^[\\/]+/, "");
-  if (!raw) return null;
-  if (raw.split(/[/\\]/).includes("..")) return null;
-
-  let baseReal: string;
-  try {
-    baseReal = realpathSync(workspacePath);
-  } catch {
-    return null;
-  }
-
-  let candidate = resolve(baseReal, raw);
-  if (existsSync(candidate)) {
-    try {
-      candidate = realpathSync(candidate);
-    } catch {
-      return null;
-    }
-  }
-
-  const relToBase = relative(baseReal, candidate);
-  if (relToBase === "" || relToBase.startsWith("..") || relToBase === "..") {
-    return null;
-  }
-
-  return candidate;
 }
 
 function parseSimpleYamlBlock(text: string): Record<string, unknown> {

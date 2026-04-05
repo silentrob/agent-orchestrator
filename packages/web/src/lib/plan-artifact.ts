@@ -2,51 +2,11 @@
  * Plan artifact path resolution and `.ao/plan.md` frontmatter parsing (dashboard API).
  */
 
-import { existsSync, realpathSync } from "node:fs";
-import { relative, resolve } from "node:path";
+export { resolvePlanArtifactPath } from "@composio/ao-core";
 
 export interface ParsedPlanArtifact {
   frontmatter: Record<string, unknown>;
   body: string;
-}
-
-const DEFAULT_PLAN_REL = ".ao/plan.md";
-
-/**
- * Resolves the absolute path to the plan file if it stays inside `workspacePath`
- * (after realpath). Rejects traversal (`..`), absolute `rel`, and empty relative result.
- */
-export function resolvePlanArtifactPath(
-  workspacePath: string,
-  relPathFromMetadata: string | undefined,
-): string | null {
-  const raw = (relPathFromMetadata?.trim() || DEFAULT_PLAN_REL).replace(/^[\\/]+/, "");
-  if (!raw) return null;
-  if (raw.split(/[/\\]/).includes("..")) return null;
-
-  let baseReal: string;
-  try {
-    baseReal = realpathSync(workspacePath);
-  } catch {
-    return null;
-  }
-
-  // Resolve from realpathed workspace so containment checks match macOS /tmp → /private/tmp, etc.
-  let candidate = resolve(baseReal, raw);
-  if (existsSync(candidate)) {
-    try {
-      candidate = realpathSync(candidate);
-    } catch {
-      return null;
-    }
-  }
-
-  const relToBase = relative(baseReal, candidate);
-  if (relToBase === "" || relToBase.startsWith("..") || relToBase === "..") {
-    return null;
-  }
-
-  return candidate;
 }
 
 /**

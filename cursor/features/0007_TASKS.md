@@ -75,7 +75,7 @@ Derived from [`0007_PLAN.md`](./0007_PLAN.md). **MVP:** approve plan frontmatter
 
 - **Priority:** Low
 - **Effort:** M
-- **Status:** `not started`
+- **Status:** `complete`
 - **Description:** Move `resolvePlanArtifactPath` from `packages/web/src/lib/plan-artifact.ts` into core (or shared module), re-export for web and use from T01 approve helper so containment is single-sourced. Rewire `GET /api/sessions/[id]/plan` and web tests.
 - **Dependencies:** T01 (or implement T01 with duplicate containment and defer T02)
 - **Files to Change:** core new/updated module; `packages/web/src/lib/plan-artifact.ts`; `packages/web/src/app/api/sessions/[id]/plan/route.ts`; tests as needed
@@ -84,6 +84,12 @@ Derived from [`0007_PLAN.md`](./0007_PLAN.md). **MVP:** approve plan frontmatter
   - `pnpm --filter @composio/ao-web test` for touched paths
 
 **API entries used:** Delta §2; existing `resolvePlanArtifactPath` contract preserved.
+
+- **Proof of work:** `packages/core/src/plan-artifact-path.ts` — canonical `resolvePlanArtifactPath`; exported from `packages/core/src/index.ts`; `plan-artifact-approve.ts` imports from `./plan-artifact-path.js` (removed duplicate); `packages/web/src/lib/plan-artifact.ts` re-exports from `@composio/ao-core` (GET `/plan` unchanged import path).
+- **Acceptance Criteria Check-off:**
+  - ✓ `plan-artifact.test.ts` + `plan-artifact-approve.test.ts` pass; web typecheck passes
+  - ✓ Single containment implementation in core
+- **Test Artifacts:** existing `plan-artifact.test.ts`, `plan-artifact-approve.test.ts` (no import path change for route tests).
 
 ---
 

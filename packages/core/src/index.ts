@@ -241,6 +241,9 @@ export type {
   GenerateConfigOptions,
 } from "./config-generator.js";
 
+// Plan artifact path resolution (0007 T02 / Delta §2)
+export { resolvePlanArtifactPath } from "./plan-artifact-path.js";
+
 // Plan artifact approval write (0007 T01)
 export type { ApprovePlanArtifactResult } from "./plan-artifact-approve.js";
 export { approvePlanArtifactInWorkspace } from "./plan-artifact-approve.js";
