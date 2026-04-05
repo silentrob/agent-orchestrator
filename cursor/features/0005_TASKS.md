@@ -2,7 +2,7 @@
 feature_number: 0005
 plan: "./0005_PLAN.md"
 plan_status: approved
-tasks_status: in progress
+tasks_status: complete
 created_at: "2026-04-02T00:00:00Z"
 ---
 
@@ -25,18 +25,19 @@ Derived from [`0005_PLAN.md`](./0005_PLAN.md). Executes **runtime** work after *
 
 ## API Contract Table (seed — verify signatures before each task)
 
-| File                                         | Export                                                                             | Notes         |
-| -------------------------------------------- | ---------------------------------------------------------------------------------- | ------------- |
-| `packages/core/src/issue-lifecycle-types.ts` | `IssueWorkflowPhase`, `ISSUE_WORKFLOW_PHASES`, `TrustGateKind`, `TRUST_GATE_KINDS` | 0004          |
-| `packages/core/src/prompt-builder.ts`        | `buildPrompt`, `PromptBuildConfig` (+ `issueWorkflowPhase?`)                         | T02           |
-| `packages/core/src/prompt/artifact-layers-by-role.ts` | `buildIssueWorkflowPhaseLayer`, `buildPlannerArtifactLayer`               | T02           |
-| `packages/core/src/types.ts`                 | `Session`, `SessionSpawnConfig`                                                    | metadata      |
-| `packages/core/src/metadata.ts`              | `updateMetadata`                                                                   | T01           |
-| `packages/core/src/session-manager.ts`       | `createSessionManager`, `spawn`                                                    | T01           |
-| `packages/web/src/lib/types.ts`              | `DashboardSession`, `IssueWorkflowPhase` re-export                               | T03           |
-| `packages/web/src/lib/serialize.ts`          | `sessionToDashboard`                                                               | T03           |
-| `packages/cli/src/commands/status.ts`        | `registerStatus` / `ao status`                                                     | T04           |
-| `packages/core/src/orchestrator-prompt.ts`   | `generateOrchestratorPrompt`, `OrchestratorPromptConfig`                           | T05           |
+| File                                                  | Export                                                                             | Notes    |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------- | -------- |
+| `packages/core/src/issue-lifecycle-types.ts`          | `IssueWorkflowPhase`, `ISSUE_WORKFLOW_PHASES`, `TrustGateKind`, `TRUST_GATE_KINDS` | 0004     |
+| `packages/core/src/prompt-builder.ts`                 | `buildPrompt`, `PromptBuildConfig` (+ `issueWorkflowPhase?`)                       | T02      |
+| `packages/core/src/prompt/artifact-layers-by-role.ts` | `buildIssueWorkflowPhaseLayer`, `buildPlannerArtifactLayer`                        | T02      |
+| `packages/core/src/types.ts`                          | `Session`, `SessionSpawnConfig`                                                    | metadata |
+| `packages/core/src/metadata.ts`                       | `updateMetadata`                                                                   | T01      |
+| `packages/core/src/session-manager.ts`                | `createSessionManager`, `spawn`                                                    | T01      |
+| `packages/web/src/lib/types.ts`                       | `DashboardSession`, `IssueWorkflowPhase` re-export                                 | T03      |
+| `packages/web/src/lib/serialize.ts`                   | `sessionToDashboard`                                                               | T03      |
+| `packages/cli/src/commands/status.ts`                 | `registerStatus` / `ao status`                                                     | T04      |
+| `packages/core/src/orchestrator-prompt.ts`            | `generateOrchestratorPrompt`, `OrchestratorPromptConfig`                           | T05      |
+| `packages/core/src/config.ts`                         | `validateConfig`, `loadConfig` (+ `requireIssueLifecycleGates` on project)         | T06      |
 
 ---
 
@@ -148,11 +149,17 @@ Derived from [`0005_PLAN.md`](./0005_PLAN.md). Executes **runtime** work after *
 
 - **Priority:** Low
 - **Effort:** L
-- **Status:** `not started`
+- **Status:** `complete`
 - **Description:** If project config enables `requireIssueLifecycleGates` (name TBD), reject or warn on `spawn` when phase gate not satisfied. **Optional slice** — may defer to 0006.
 - **Dependencies:** T01, T02
 - **Files to Change:** `packages/core/src/config.ts` (Zod); `session-manager.ts`; docs
 - **Acceptance Criteria:** Documented + tested opt-in behavior; default off
+
+**Proof of Work:** `ProjectConfig.requireIssueLifecycleGates` + Zod; worker `spawn` rejects when flag true and resolved phase is `execute` (gate persistence not yet implemented); `AGENTS.md` blurb; `config-validation.test.ts` + `spawn.test.ts`.
+
+**Acceptance Criteria Check-off:** ✓ default off; ✓ opt-in reject with clear error; ✓ docs + tests.
+
+**Test Artifacts:** `config-validation.test.ts` — optional flag parses; `spawn.test.ts` — `requireIssueLifecycleGates (0005 T06)` describe.
 
 ---
 

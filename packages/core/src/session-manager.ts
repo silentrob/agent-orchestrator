@@ -943,6 +943,20 @@ export function createSessionManager(deps: SessionManagerDeps): OpenCodeSessionM
       );
     }
 
+    if (project.requireIssueLifecycleGates) {
+      const phaseForGuard =
+        defaultIssueWorkflowPhaseForSpawn({
+          issueId: spawnConfig.issueId,
+          workerRole: spawnConfig.workerRole,
+        }) ?? (spawnConfig.workerRole === "planner" ? "plan" : undefined);
+      if (phaseForGuard === "execute") {
+        throw new Error(
+          `Project "${spawnConfig.projectId}" has requireIssueLifecycleGates enabled but Trust Vector gate satisfaction is not yet persisted for executor-phase spawns. ` +
+            `Set requireIssueLifecycleGates to false in agent-orchestrator.yaml, or spawn with --worker-role planner, validator, or reproducer until gate metadata is written.`,
+        );
+      }
+    }
+
     const selection = resolveAgentSelection({
       role: "worker",
       project,

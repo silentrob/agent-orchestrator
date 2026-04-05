@@ -1143,6 +1143,13 @@ export interface ProjectConfig {
     /** Require human approval before executing decomposed plans (default: true) */
     requireApproval: boolean;
   };
+
+  /**
+   * When true, spawn enforces Trust Vector gate policy for issue-backed workers (0005).
+   * Default false. Until gate satisfaction is written to metadata, executor-phase spawns
+   * with an issue id are rejected — disable the flag or use non-executor roles.
+   */
+  requireIssueLifecycleGates?: boolean;
 }
 
 export interface TrackerConfig {

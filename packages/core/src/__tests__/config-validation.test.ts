@@ -5,6 +5,23 @@
 import { describe, it, expect } from "vitest";
 import { validateConfig } from "../config.js";
 
+describe("Config Validation - requireIssueLifecycleGates", () => {
+  it("accepts optional requireIssueLifecycleGates on a project", () => {
+    const config = {
+      projects: {
+        proj1: {
+          path: "/repos/integrator",
+          repo: "org/integrator",
+          defaultBranch: "main",
+          requireIssueLifecycleGates: true,
+        },
+      },
+    };
+
+    expect(() => validateConfig(config)).not.toThrow();
+  });
+});
+
 describe("Config Validation - Project Uniqueness", () => {
   it("rejects duplicate project IDs (same basename)", () => {
     const config = {

@@ -20,6 +20,10 @@ pnpm format                             # Prettier format
 
 Monorepo (pnpm) with packages: `core`, `cli`, `web`, and `plugins/*`. The web dashboard is a Next.js 15 app (App Router) with React 19 and Tailwind CSS v4. Data flows from `agent-orchestrator.yaml` through core's `loadConfig()` to API routes, served via SSR and a 5s-interval SSE stream. Terminal sessions use WebSocket connections to tmux PTYs. See CLAUDE.md for the full plugin architecture (8 slots), session lifecycle, and data flow.
 
+## Config: issue lifecycle (optional)
+
+Per project, `requireIssueLifecycleGates` (boolean, default off): when `true`, worker spawns that resolve to the **execute** phase with an `issueId` are rejected until Trust Vector gate satisfaction is persisted in metadata. Until gate writers exist, leave this disabled or use non-executor worker roles. See `docs/specs/issue-lifecycle-trust-vector.md`.
+
 ## Key Files
 
 - `packages/core/src/types.ts` — All plugin interfaces (Agent, Runtime, Workspace, etc.)

@@ -170,6 +170,7 @@ const ProjectConfigSchema = z.object({
     .optional(),
   opencodeIssueSessionStrategy: z.enum(["reuse", "delete", "ignore"]).optional(),
   decomposer: DecomposerConfigSchema.optional(),
+  requireIssueLifecycleGates: z.boolean().optional(),
 });
 
 const DefaultPluginsSchema = z.object({

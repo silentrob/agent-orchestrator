@@ -1080,6 +1080,41 @@ describe("spawn", () => {
     });
   });
 
+  describe("requireIssueLifecycleGates (0005 T06)", () => {
+    afterEach(() => {
+      delete config.projects["my-app"]!.requireIssueLifecycleGates;
+    });
+
+    it("rejects executor-phase spawn when enabled", async () => {
+      config.projects["my-app"]!.requireIssueLifecycleGates = true;
+      const sm = createSessionManager({ config, registry: mockRegistry });
+      await expect(sm.spawn({ projectId: "my-app", issueId: "INT-900" })).rejects.toThrow(
+        "requireIssueLifecycleGates enabled but Trust Vector gate satisfaction is not yet persisted",
+      );
+      expect(mockRuntime.create).not.toHaveBeenCalled();
+    });
+
+    it("allows planner spawn when enabled", async () => {
+      config.projects["my-app"]!.requireIssueLifecycleGates = true;
+      const sm = createSessionManager({ config, registry: mockRegistry });
+      const session = await sm.spawn({
+        projectId: "my-app",
+        issueId: "INT-901",
+        workerRole: "planner",
+      });
+      expect(session.id).toMatch(/^app-/);
+      expect(mockRuntime.create).toHaveBeenCalled();
+    });
+
+    it("allows executor spawn when disabled", async () => {
+      config.projects["my-app"]!.requireIssueLifecycleGates = false;
+      const sm = createSessionManager({ config, registry: mockRegistry });
+      const session = await sm.spawn({ projectId: "my-app", issueId: "INT-902" });
+      expect(session.issueId).toBe("INT-902");
+      expect(mockRuntime.create).toHaveBeenCalled();
+    });
+  });
+
   describe("spawnOrchestrator", () => {
     it("blocks orchestrator spawn while the project is globally paused", async () => {
       writeMetadata(sessionsDir, "app-orchestrator", {
