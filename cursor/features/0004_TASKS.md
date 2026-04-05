@@ -2,7 +2,7 @@
 feature_number: 0004
 plan: "./0004_PLAN.md"
 plan_status: approved
-tasks_status: in progress
+tasks_status: complete
 created_at: "2026-04-02T00:00:00Z"
 ---
 
@@ -29,16 +29,18 @@ Derived from `0004_PLAN.md` (approved). No scope beyond IN-SCOPE.
 | `packages/core/src/orchestrator-prompt.ts`            | `generateOrchestratorPrompt` | function  | `(opts: OrchestratorPromptConfig) -> string`                               | export                 |
 | `packages/core/src/orchestrator-prompt.ts`            | `OrchestratorPromptConfig`   | interface | `config`, `projectId`, `project`                                           | export                 |
 | `packages/core/src/metadata.ts`                       | `updateMetadata`             | function  | `(dataDir, sessionId, updates: Partial<Record<string, string>>) -> void`   | export                 |
+| `packages/core/src/issue-lifecycle-types.ts`          | `IssueWorkflowPhase`         | type      | union + `ISSUE_WORKFLOW_PHASES` readonly tuple                             | T06                    |
+| `packages/core/src/issue-lifecycle-types.ts`          | `TrustGateKind`              | type      | union + `TRUST_GATE_KINDS` readonly tuple                                  | T06                    |
 
 ---
 
-## Delta Proposals (PROPOSED — implement in tasks below)
+## Delta Proposals (implemented in T06)
 
-| File                                         | Export               | Kind      | Signature (exact)                                                                                                                           |
-| -------------------------------------------- | -------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/core/src/issue-lifecycle-types.ts` | `IssueWorkflowPhase` | type      | String union: `"reproducer" \| "plan" \| "execute" \| "validate" \| "done"`                                                                 |
-| `packages/core/src/issue-lifecycle-types.ts` | `TrustGateKind`      | type      | String union covering MVP gates from 0004 §3 (human plan approval, CI, artifact presence, config waiver) — exact literals in implementation |
-| `packages/core/src/index.ts`                 | —                    | re-export | Export new types from `issue-lifecycle-types.js`                                                                                            |
+| File                                         | Export               | Kind      | Signature (exact)                                                                                                  |
+| -------------------------------------------- | -------------------- | --------- | ------------------------------------------------------------------------------------------------------------------ |
+| `packages/core/src/issue-lifecycle-types.ts` | `IssueWorkflowPhase` | type      | String union: `"reproducer" \| "plan" \| "execute" \| "validate" \| "done"` (+ `ISSUE_WORKFLOW_PHASES` const)      |
+| `packages/core/src/issue-lifecycle-types.ts` | `TrustGateKind`      | type      | String union + `TRUST_GATE_KINDS` (MVP gates)                                                                      |
+| `packages/core/src/index.ts`                 | —                    | re-export | `IssueWorkflowPhase`, `TrustGateKind`, `ISSUE_WORKFLOW_PHASES`, `TRUST_GATE_KINDS` from `issue-lifecycle-types.js` |
 
 ---
 
@@ -143,7 +145,7 @@ Derived from `0004_PLAN.md` (approved). No scope beyond IN-SCOPE.
 
 - **Priority:** High
 - **Effort:** S
-- **Status:** `not started`
+- **Status:** `complete`
 - **Description:** Add `packages/core/src/issue-lifecycle-types.ts` with exported string-literal unions for workflow phase and trust gate kinds (MVP set from 0004 §3 table + Trust Vector examples). Re-export from `packages/core/src/index.ts`. Add Vitest file asserting type exports are stable strings.
 - **Dependencies:** T05 (conceptual alignment with persistence sketch)
 - **Files to Change:** `packages/core/src/issue-lifecycle-types.ts` (new); `packages/core/src/index.ts`; `packages/core/src/__tests__/issue-lifecycle-types.test.ts` (new)
@@ -151,6 +153,12 @@ Derived from `0004_PLAN.md` (approved). No scope beyond IN-SCOPE.
   - `pnpm --filter @composio/ao-core typecheck` passes
   - `pnpm --filter @composio/ao-core exec vitest run src/__tests__/issue-lifecycle-types.test.ts` passes
   - No wiring into `sessionManager.spawn` or `buildPrompt` (Future Work)
+
+**Proof of Work:** `packages/core/src/issue-lifecycle-types.ts` — `ISSUE_WORKFLOW_PHASES`, `IssueWorkflowPhase`, `TRUST_GATE_KINDS`, `TrustGateKind`; `packages/core/src/index.ts` re-exports; no changes to `session-manager.ts` / `prompt-builder.ts`.
+
+**Acceptance Criteria Check-off:** ✓ typecheck; ✓ vitest 4 tests; ✓ no spawn/buildPrompt wiring.
+
+**Test Artifacts:** `packages/core/src/__tests__/issue-lifecycle-types.test.ts` — `exports stable IssueWorkflowPhase literals in order`, `IssueWorkflowPhase satisfies exhaustive string union`, `exports stable TrustGateKind literals`, `TrustGateKind satisfies exhaustive string union`.
 
 ---
 
@@ -166,13 +174,13 @@ Derived from `0004_PLAN.md` (approved). No scope beyond IN-SCOPE.
 
 ### API Reference Audit
 
-| Task    | Uses API Contract entries | Notes                                                                                          |
-| ------- | ------------------------- | ---------------------------------------------------------------------------------------------- |
-| T01     | none                      | git                                                                                            |
-| T02–T05 | none                      | markdown only                                                                                  |
-| T06     | **PROPOSED Delta only**   | New file `issue-lifecycle-types.ts`; re-export via `index.ts` pattern matches existing exports |
+| Task    | Uses API Contract entries | Notes                                                      |
+| ------- | ------------------------- | ---------------------------------------------------------- |
+| T01     | none                      | git                                                        |
+| T02–T05 | none                      | markdown only                                              |
+| T06     | Delta → **implemented**   | `issue-lifecycle-types.ts` + `index.ts` re-exports + tests |
 
-**ERROR: Nonexistent API** — None for T01–T05. T06 uses **Delta Proposals** only.
+**ERROR: Nonexistent API** — None. T06 Delta types are implemented in `issue-lifecycle-types.ts`.
 
 ### Scope Audit
 
