@@ -181,7 +181,7 @@ Derived from [`0008_PLAN.md`](./0008_PLAN.md) (approved). **North star:** `spawn
 
 - **Priority:** Low
 - **Effort:** S
-- **Status:** `not started`
+- **Status:** `complete`
 - **Description:** Add short bullets to `AGENTS.md` (or `packages/cli/src/lib/config-instruction.ts` only if preferred) describing `ao session advance` and the rule: **spawn** creates; **advance** moves phase on the **same** session when gates pass.
 - **Dependencies:** T04
 - **Files to Change:** `AGENTS.md` and/or `packages/cli/src/lib/config-instruction.ts`
@@ -189,6 +189,12 @@ Derived from [`0008_PLAN.md`](./0008_PLAN.md) (approved). **North star:** `spawn
   - Conventional-commit-ready doc delta; links to `0008_PLAN.md` optional
 
 **API entries used:** none (documentation only).
+
+- **Proof of work:** Added `## CLI: issue workflow phase (advance)` in `AGENTS.md` (spawn vs advance, `ao session advance`, `ao status` preview, link to `cursor/features/0008_PLAN.md`). Extended `requireIssueLifecycleGates` comments in `config-instruction.ts` for advance + status preview.
+- **Acceptance Criteria Check-off:**
+  - ✓ Bullets cover advance, same-session phase move when gates pass, spawn creates
+  - ✓ Optional plan link included
+- **Test Artifacts:** n/a (documentation)
 
 ---
 
