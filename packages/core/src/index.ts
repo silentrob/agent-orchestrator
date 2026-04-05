@@ -122,6 +122,7 @@ export {
   MVP_EXECUTOR_TRUST_GATE_KINDS,
   isPlanIssueAligned,
   listMissingExecutorTrustGates,
+  listMissingTransitionGates,
 } from "./evaluate-trust-gates.js";
 
 // Global pause constants and utilities
