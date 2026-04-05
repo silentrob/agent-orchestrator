@@ -10,6 +10,9 @@ import {
   type ActivityState,
   type Tracker,
   type ProjectConfig,
+  type IssueWorkflowPhase,
+  ISSUE_WORKFLOW_PHASES,
+  ISSUE_WORKFLOW_PHASE_METADATA_KEY,
   isOrchestratorSession,
   loadConfig,
 } from "@composio/ao-core";
@@ -42,6 +45,8 @@ interface SessionInfo {
   reviewDecision: ReviewDecision | null;
   pendingThreads: number | null;
   activity: ActivityState | null;
+  /** Validated from `issueWorkflowPhase` metadata (0005); null if absent or unknown. */
+  issueWorkflowPhase: IssueWorkflowPhase | null;
 }
 
 interface StatusOptions {
@@ -52,6 +57,17 @@ interface StatusOptions {
 }
 
 const DEFAULT_WATCH_INTERVAL_SECONDS = 5;
+
+function parseIssueWorkflowPhaseFromMetadata(
+  metadata: Record<string, string>,
+): IssueWorkflowPhase | null {
+  const raw = metadata[ISSUE_WORKFLOW_PHASE_METADATA_KEY];
+  if (typeof raw !== "string" || raw.trim() === "") return null;
+  const v = raw.trim();
+  return (ISSUE_WORKFLOW_PHASES as readonly string[]).includes(v)
+    ? (v as IssueWorkflowPhase)
+    : null;
+}
 
 function parseWatchIntervalSeconds(value?: string): number {
   if (!value) return DEFAULT_WATCH_INTERVAL_SECONDS;
@@ -77,6 +93,7 @@ async function gatherSessionInfo(
   const suppressPROwnership = isOrchestratorSession(session);
   let branch = session.branch;
   const status = session.status;
+  const issueWorkflowPhase = parseIssueWorkflowPhaseFromMetadata(session.metadata);
   const summary = session.metadata["summary"] ?? null;
   const prUrl = suppressPROwnership ? null : (session.metadata["pr"] ?? null);
   const issue = session.issueId;
@@ -158,12 +175,14 @@ async function gatherSessionInfo(
     reviewDecision,
     pendingThreads,
     activity,
+    issueWorkflowPhase,
   };
 }
 
 // Column widths for the table
 const COL = {
   session: 14,
+  phase: 10,
   branch: 24,
   pr: 6,
   ci: 6,
@@ -176,6 +195,7 @@ const COL = {
 function printTableHeader(): void {
   const hdr =
     padCol("Session", COL.session) +
+    padCol("Phase", COL.phase) +
     padCol("Branch", COL.branch) +
     padCol("PR", COL.pr) +
     padCol("CI", COL.ci) +
@@ -185,7 +205,15 @@ function printTableHeader(): void {
     "Age";
   console.log(chalk.dim(`  ${hdr}`));
   const totalWidth =
-    COL.session + COL.branch + COL.pr + COL.ci + COL.review + COL.threads + COL.activity + 3;
+    COL.session +
+    COL.phase +
+    COL.branch +
+    COL.pr +
+    COL.ci +
+    COL.review +
+    COL.threads +
+    COL.activity +
+    3;
   console.log(chalk.dim(`  ${"─".repeat(totalWidth)}`));
 }
 
@@ -194,6 +222,10 @@ function printSessionRow(info: SessionInfo): void {
 
   const row =
     padCol(chalk.green(info.name), COL.session) +
+    padCol(
+      info.issueWorkflowPhase ? chalk.dim(info.issueWorkflowPhase) : chalk.dim("-"),
+      COL.phase,
+    ) +
     padCol(info.branch ? chalk.cyan(info.branch) : chalk.dim("-"), COL.branch) +
     padCol(info.prNumber ? chalk.blue(prStr) : chalk.dim(prStr), COL.pr) +
     padCol(ciStatusIcon(info.ciStatus), COL.ci) +
@@ -219,8 +251,12 @@ function printSessionRow(info: SessionInfo): void {
 function printOrchestratorRow(info: SessionInfo): void {
   const lastActivity =
     info.lastActivity === "-" ? chalk.dim("unknown") : chalk.dim(info.lastActivity);
+  const phaseBit =
+    info.issueWorkflowPhase !== null
+      ? `${chalk.dim(" · ")}${chalk.dim(info.issueWorkflowPhase)}`
+      : "";
   console.log(
-    `  ${chalk.magenta("Orchestrator:")} ${chalk.green(info.name)} ${chalk.dim("(")}${lastActivity}${chalk.dim(")")}`,
+    `  ${chalk.magenta("Orchestrator:")} ${chalk.green(info.name)}${phaseBit} ${chalk.dim("(")}${lastActivity}${chalk.dim(")")}`,
   );
   const displaySummary = info.claudeSummary || info.summary;
   if (displaySummary) {
@@ -281,9 +317,7 @@ export function registerStatus(program: Command): void {
           console.log(banner("AGENT ORCHESTRATOR STATUS"));
           if (opts.watch) {
             console.log(
-              chalk.dim(
-                `Refreshing every ${watchIntervalSeconds}s. Press Ctrl+C to exit.`,
-              ),
+              chalk.dim(`Refreshing every ${watchIntervalSeconds}s. Press Ctrl+C to exit.`),
             );
             console.log();
           } else {

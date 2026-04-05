@@ -10,11 +10,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import {
-  type Session,
-  type SessionManager,
-  type ActivityState,
-} from "@composio/ao-core";
+import { type Session, type SessionManager, type ActivityState } from "@composio/ao-core";
 
 const {
   mockTmux,
@@ -288,7 +284,11 @@ beforeEach(() => {
   mockSessionManager.send.mockReset();
   mockGetPluginRegistry.mockReset();
   // Default registry: no tracker
-  mockGetPluginRegistry.mockResolvedValue({ get: vi.fn().mockReturnValue(null), list: vi.fn(), register: vi.fn() });
+  mockGetPluginRegistry.mockResolvedValue({
+    get: vi.fn().mockReturnValue(null),
+    list: vi.fn(),
+    register: vi.fn(),
+  });
 
   // Default: list reads from sessionsDir
   mockSessionManager.list.mockImplementation(async () => {
@@ -358,6 +358,26 @@ describe("status command", () => {
     expect(output).toContain("INT-100");
     // other-session should not appear (not in metadata)
     expect(output).not.toContain("other-session");
+  });
+
+  it("shows issue workflow phase when metadata has issueWorkflowPhase", async () => {
+    writeFileSync(
+      join(sessionsDir, "app-phase"),
+      "branch=feat/x\nstatus=working\nissueWorkflowPhase=validate\n",
+    );
+
+    mockTmux.mockImplementation(async (...args: string[]) => {
+      if (args[0] === "list-sessions") return "app-phase";
+      if (args[0] === "display-message") return null;
+      return null;
+    });
+    mockGit.mockResolvedValue(null);
+
+    await program.parseAsync(["node", "test", "status"]);
+
+    const output = consoleSpy.mock.calls.map((c) => c[0]).join("\n");
+    expect(output).toContain("Phase");
+    expect(output).toContain("validate");
   });
 
   it("counts total sessions correctly", async () => {
@@ -546,7 +566,7 @@ describe("status command", () => {
   it("outputs JSON with enriched fields", async () => {
     writeFileSync(
       join(sessionsDir, "app-1"),
-      "worktree=/tmp/wt\nbranch=feat/json\nstatus=working\n",
+      "worktree=/tmp/wt\nbranch=feat/json\nstatus=working\nissueWorkflowPhase=execute\n",
     );
 
     mockTmux.mockImplementation(async (...args: string[]) => {
@@ -579,12 +599,13 @@ describe("status command", () => {
     expect(parsed[0].ciStatus).toBe("passing");
     expect(parsed[0].reviewDecision).toBe("pending");
     expect(parsed[0].pendingThreads).toBe(0);
+    expect(parsed[0].issueWorkflowPhase).toBe("execute");
   });
 
   it("rejects --watch with --json", async () => {
-    await expect(program.parseAsync(["node", "test", "status", "--watch", "--json"])).rejects.toThrow(
-      "process.exit(1)",
-    );
+    await expect(
+      program.parseAsync(["node", "test", "status", "--watch", "--json"]),
+    ).rejects.toThrow("process.exit(1)");
 
     const errors = vi
       .mocked(console.error)
@@ -594,9 +615,9 @@ describe("status command", () => {
   });
 
   it("rejects non-positive watch intervals", async () => {
-    await expect(program.parseAsync(["node", "test", "status", "--watch", "--interval", "0"])).rejects.toThrow(
-      "process.exit(1)",
-    );
+    await expect(
+      program.parseAsync(["node", "test", "status", "--watch", "--interval", "0"]),
+    ).rejects.toThrow("process.exit(1)");
 
     const errors = vi
       .mocked(console.error)
@@ -1086,9 +1107,7 @@ describe("status command", () => {
       capturedCallback = fn as () => void;
       return 77 as never;
     });
-    clearIntervalSpy = vi
-      .spyOn(globalThis, "clearInterval")
-      .mockImplementation(() => undefined);
+    clearIntervalSpy = vi.spyOn(globalThis, "clearInterval").mockImplementation(() => undefined);
     processOnceSpy = vi.spyOn(process, "once").mockImplementation((_e, _l) => process);
 
     await program.parseAsync(["node", "test", "status", "--watch", "--interval", "5"]);
@@ -1132,9 +1151,7 @@ describe("status command", () => {
       capturedCallback = fn as () => void;
       return 55 as never;
     });
-    clearIntervalSpy = vi
-      .spyOn(globalThis, "clearInterval")
-      .mockImplementation(() => undefined);
+    clearIntervalSpy = vi.spyOn(globalThis, "clearInterval").mockImplementation(() => undefined);
     processOnceSpy = vi.spyOn(process, "once").mockImplementation((_e, _l) => process);
 
     const originalIsTTY = process.stdout.isTTY;

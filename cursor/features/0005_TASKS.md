@@ -35,6 +35,7 @@ Derived from [`0005_PLAN.md`](./0005_PLAN.md). Executes **runtime** work after *
 | `packages/core/src/session-manager.ts`       | `createSessionManager`, `spawn`                                                    | T01           |
 | `packages/web/src/lib/types.ts`              | `DashboardSession`, `IssueWorkflowPhase` re-export                               | T03           |
 | `packages/web/src/lib/serialize.ts`          | `sessionToDashboard`                                                               | T03           |
+| `packages/cli/src/commands/status.ts`        | `registerStatus` / `ao status`                                                     | T04           |
 
 ---
 
@@ -106,13 +107,19 @@ Derived from [`0005_PLAN.md`](./0005_PLAN.md). Executes **runtime** work after *
 
 - **Priority:** Medium
 - **Effort:** S
-- **Status:** `not started`
+- **Status:** `complete`
 - **Description:** When printing session rows, include phase column or suffix if metadata present. Prefer smallest change (e.g. `packages/cli` status command).
 - **Dependencies:** T01
 - **Files to Change:** CLI status formatting + snapshot/tests if any
 - **Acceptance Criteria:**
   - Phase appears in `ao status` output for sessions with metadata
   - No breaking change to default output width (truncate or optional column)
+
+**Proof of Work:** `SessionInfo.issueWorkflowPhase`; `parseIssueWorkflowPhaseFromMetadata` using `ISSUE_WORKFLOW_PHASE_METADATA_KEY` / `ISSUE_WORKFLOW_PHASES`; worker table adds `Phase` column (width 10, `padCol` truncates); orchestrator line shows `· phase` when set; `--json` includes `issueWorkflowPhase`.
+
+**Acceptance Criteria Check-off:** ✓ text + JSON; ✓ narrow column (no unbounded width).
+
+**Test Artifacts:** `status.test.ts` — "shows issue workflow phase when metadata…"; JSON test asserts `issueWorkflowPhase: "execute"`.
 
 ---
 
