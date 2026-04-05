@@ -345,6 +345,7 @@ export function createMockSessionManager(): SessionManager {
     kill: vi.fn().mockResolvedValue(undefined),
     cleanup: vi.fn().mockResolvedValue({ killed: [], skipped: [], errors: [] }),
     send: vi.fn().mockResolvedValue(undefined),
+    advancePhase: vi.fn().mockResolvedValue(makeSession()),
     claimPR: vi.fn().mockResolvedValue({
       sessionId: "app-1",
       projectId: "my-app",

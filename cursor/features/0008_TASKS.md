@@ -111,7 +111,7 @@ Derived from [`0008_PLAN.md`](./0008_PLAN.md) (approved). **North star:** `spawn
 
 - **Priority:** High
 - **Effort:** L
-- **Status:** `not started`
+- **Status:** `complete`
 - **Description:** Extend `SessionManager` / `OpenCodeSessionManager` with `advancePhase(sessionId, target, options?)` per Delta §1. Load session + project; if `project.requireIssueLifecycleGates`, evaluate **transition** gates via T01/T02 probe path; persist `issueWorkflowPhase` and `workerRole` via existing metadata patterns; call `buildPrompt` with new phase + issue context; `send` composed instruction to session. Respect `skipGateCheck` only for tests or explicit danger flag (document). Export updated interface from `types.ts`; implement in `session-manager.ts`; export unchanged factory return type.
 - **Dependencies:** T01, T02
 - **Files to Change:** `packages/core/src/types.ts`; `packages/core/src/session-manager.ts`; `packages/core/src/index.ts`; `packages/core/src/__tests__/session-manager/` (new or extend spawn tests)
@@ -121,6 +121,13 @@ Derived from [`0008_PLAN.md`](./0008_PLAN.md) (approved). **North star:** `spawn
   - Tests cover: blocked advance when gates missing; successful advance updates metadata and calls `send` path (mock runtime/agent as existing spawn tests)
 
 **API entries used:** `SessionManager`, `Session`, `buildPrompt`, `PromptBuildConfig`, `updateMetadata`, `get`/`list` patterns, `listMissingTransitionGates` (T01), probe path (T02), `loadConfig` via deps, **PROPOSED** `advancePhase`.
+
+- **Proof of work:** Added `AdvancePhaseTarget` / `AdvancePhaseOptions` and optional `SessionManager.advancePhase?` in `types.ts`. Implemented `advancePhase` in `session-manager.ts` (gate merge + `resolvePlanArtifactProbeForIssue` + `listMissingTransitionGates`, metadata updates, `buildPrompt` + plan-disk note, `send`). Helpers: `mergeTrustGateMetadataForGateEvaluation`, `inferCurrentIssueWorkflowPhase`, `resolveWorkerRoleForAdvance`. `createSessionManager` return includes `advancePhase`. Re-export via `export *` from `types` (no `index.ts` change). `test-utils` mock gains `advancePhase`.
+- **Acceptance Criteria Check-off:**
+  - ✓ Signature matches Delta §1 (`advancePhase?`, `AdvancePhaseTarget`, `AdvancePhaseOptions` with `skipGateCheck?`)
+  - ✓ `pnpm --filter @composio/ao-core typecheck` passes
+  - ✓ `advance-phase.test.ts`: gates block plan→execute; `skipGateCheck` updates metadata + `sendMessage`; satisfied gates allow advance
+- **Test Artifacts:** `packages/core/src/__tests__/session-manager/advance-phase.test.ts` — 3 tests.
 
 ---
 
