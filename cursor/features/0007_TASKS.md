@@ -115,7 +115,7 @@ Derived from [`0007_PLAN.md`](./0007_PLAN.md). **MVP:** approve plan frontmatter
 
 - **Priority:** High
 - **Effort:** S
-- **Status:** `not started`
+- **Status:** `complete`
 - **Description:** Add route handler (Delta §3) under `packages/web/src/app/api/sessions/[id]/plan/approve/route.ts`. Validate `id` like `message` route; `getServices()`; `sessionManager.get(id)`; require `metadata.workerRole === "planner"` (match `SessionDetail` planner panel gate); require `workspacePath`; call `approvePlanArtifactInWorkspace`. Return JSON `{ ok: true }` or structured error with observability pattern used by sibling routes.
 - **Dependencies:** T01
 - **Files to Change:** `packages/web/src/app/api/sessions/[id]/plan/approve/route.ts` (new); optional `packages/web/src/lib/observability` usage consistent with GET plan
@@ -125,6 +125,13 @@ Derived from [`0007_PLAN.md`](./0007_PLAN.md). **MVP:** approve plan frontmatter
   - Test file under `packages/web/src/app/api/...` or existing API test pattern
 
 **API entries used:** `getServices` / session manager pattern from `message/route.ts` and `plan/route.ts`; T01 helper.
+
+- **Proof of work:** `packages/web/src/app/api/sessions/[id]/plan/approve/route.ts` — `POST` validates id, loads session, `403` if `workerRole !== planner`, `400` if no `workspacePath`, calls `approvePlanArtifactInWorkspace` with `planArtifactRelPath`; `recordApiObservation` + `jsonWithCorrelation`; approve errors mapped to 400/404/500.
+- **Acceptance Criteria Check-off:**
+  - ✓ 400 invalid id; 404 unknown session; 403 non-planner; 400 no workspace; 200 `{ ok: true }` with temp plan file + planner session
+  - ✓ Observability aligned with GET plan / message routes
+  - ✓ `pnpm --filter @composio/ao-web test` passes
+- **Test Artifacts:** `packages/web/src/__tests__/api-routes.test.ts` — `describe("POST /api/sessions/[id]/plan/approve")`.
 
 ---
 

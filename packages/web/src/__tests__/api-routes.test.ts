@@ -209,6 +209,7 @@ import { GET as eventsGET } from "@/app/api/events/route";
 import { GET as observabilityGET } from "@/app/api/observability/route";
 import { GET as runtimeTerminalGET } from "@/app/api/runtime/terminal/route";
 import { GET as planGET } from "@/app/api/sessions/[id]/plan/route";
+import { POST as planApprovePOST } from "@/app/api/sessions/[id]/plan/approve/route";
 
 function makeRequest(url: string, init?: RequestInit): NextRequest {
   return new NextRequest(
@@ -1141,6 +1142,94 @@ describe("API Routes", () => {
       expect(data.frontmatter).toMatchObject({ status: "approved" });
       expect(typeof data.path).toBe("string");
       expect(data.path.endsWith("plan.md")).toBe(true);
+    });
+  });
+
+  describe("POST /api/sessions/[id]/plan/approve", () => {
+    let tmpWorkspace: string | undefined;
+
+    afterEach(() => {
+      if (tmpWorkspace) {
+        try {
+          rmSync(tmpWorkspace, { recursive: true, force: true });
+        } catch {
+          /* ignore */
+        }
+        tmpWorkspace = undefined;
+      }
+    });
+
+    it("returns 400 for invalid session id", async () => {
+      const res = await planApprovePOST(
+        makeRequest("http://localhost:3000/api/sessions/bad!id/plan/approve", { method: "POST" }),
+        { params: Promise.resolve({ id: "bad!id" }) },
+      );
+      expect(res.status).toBe(400);
+    });
+
+    it("returns 404 when session is not found", async () => {
+      (mockSessionManager.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
+      const res = await planApprovePOST(
+        makeRequest("http://localhost:3000/api/sessions/unknown/plan/approve", { method: "POST" }),
+        { params: Promise.resolve({ id: "unknown" }) },
+      );
+      expect(res.status).toBe(404);
+      const data = await res.json();
+      expect(data.error).toBe("Session not found");
+    });
+
+    it("returns 403 when session is not a planner", async () => {
+      const res = await planApprovePOST(
+        makeRequest("http://localhost:3000/api/sessions/backend-3/plan/approve", {
+          method: "POST",
+        }),
+        { params: Promise.resolve({ id: "backend-3" }) },
+      );
+      expect(res.status).toBe(403);
+      const data = await res.json();
+      expect(data.error).toContain("planner");
+    });
+
+    it("returns 400 when workspace path is missing", async () => {
+      (mockSessionManager.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        makeSession({
+          id: "planner-no-ws",
+          workspacePath: null,
+          metadata: { workerRole: "planner" },
+        }),
+      );
+      const res = await planApprovePOST(
+        makeRequest("http://localhost:3000/api/sessions/planner-no-ws/plan/approve", {
+          method: "POST",
+        }),
+        { params: Promise.resolve({ id: "planner-no-ws" }) },
+      );
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toContain("workspace");
+    });
+
+    it("returns 200 when approve succeeds", async () => {
+      tmpWorkspace = mkdtempSync(join(tmpdir(), "ao-plan-appr-"));
+      const ao = join(tmpWorkspace, ".ao");
+      mkdirSync(ao, { recursive: true });
+      writeFileSync(join(ao, "plan.md"), "---\nstatus: pending_approval\n---\n\n# P\n", "utf8");
+      (mockSessionManager.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        makeSession({
+          id: "planner-ok",
+          workspacePath: tmpWorkspace,
+          metadata: { workerRole: "planner", planArtifactRelPath: ".ao/plan.md" },
+        }),
+      );
+      const res = await planApprovePOST(
+        makeRequest("http://localhost:3000/api/sessions/planner-ok/plan/approve", {
+          method: "POST",
+        }),
+        { params: Promise.resolve({ id: "planner-ok" }) },
+      );
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.ok).toBe(true);
     });
   });
 });
