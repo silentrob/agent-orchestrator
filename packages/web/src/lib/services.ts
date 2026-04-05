@@ -29,6 +29,7 @@ import {
   type Issue,
   type Session,
   type DecomposerConfig,
+  type WorkerRole,
   DEFAULT_DECOMPOSER_CONFIG,
   isOrchestratorSession,
   TERMINAL_STATUSES,
@@ -104,6 +105,13 @@ async function initServices(): Promise<Services> {
 const BACKLOG_LABEL = "agent:backlog";
 const BACKLOG_POLL_INTERVAL = 60_000; // 1 minute
 const MAX_CONCURRENT_AGENTS = 5; // Max active agent sessions across all projects
+
+/** Default backlog claim role when `backlogDefaultWorkerRole` is omitted (planner-first). */
+const DEFAULT_BACKLOG_WORKER_ROLE: WorkerRole = "planner";
+
+function backlogSpawnWorkerRole(project: ProjectConfig): WorkerRole {
+  return project.backlogDefaultWorkerRole ?? DEFAULT_BACKLOG_WORKER_ROLE;
+}
 
 const globalForBacklog = globalThis as typeof globalThis & {
   _aoBacklogStarted?: boolean;
@@ -278,8 +286,12 @@ export async function pollBacklog(): Promise<void> {
             const leaves = getLeaves(plan.tree);
 
             if (leaves.length <= 1) {
-              // Atomic — spawn directly
-              await sessionManager.spawn({ projectId, issueId: issue.id });
+              // Atomic — spawn directly (role from project backlog policy)
+              await sessionManager.spawn({
+                projectId,
+                issueId: issue.id,
+                workerRole: backlogSpawnWorkerRole(project),
+              });
               availableSlots--;
             } else if (decomposerConfig.requireApproval) {
               // Post plan as comment and wait for human approval
@@ -312,13 +324,18 @@ export async function pollBacklog(): Promise<void> {
                   issueId: issue.id,
                   lineage: leaf.lineage,
                   siblings,
+                  workerRole: "executor",
                 });
                 availableSlots--;
               }
             }
           } else {
-            // No decomposition — spawn directly (classic behavior)
-            await sessionManager.spawn({ projectId, issueId: issue.id });
+            // No decomposition — spawn directly (classic behavior; role from backlog policy)
+            await sessionManager.spawn({
+              projectId,
+              issueId: issue.id,
+              workerRole: backlogSpawnWorkerRole(project),
+            });
             availableSlots--;
           }
 

@@ -190,6 +190,14 @@ describe("pollBacklog", () => {
     const { pollBacklog } = await import("../lib/services");
     await pollBacklog();
 
+    expect(mockSpawn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectId: "test-project",
+        issueId: "123",
+        workerRole: "planner",
+      }),
+    );
+
     expect(mockUpdateIssue).toHaveBeenCalledWith(
       "123",
       {
@@ -198,6 +206,67 @@ describe("pollBacklog", () => {
         comment: "Claimed by agent orchestrator — session spawned.",
       },
       expect.objectContaining({ tracker: { plugin: "github" } }),
+    );
+  });
+
+  it("spawns with executor when backlogDefaultWorkerRole is executor", async () => {
+    mockLoadConfig.mockReturnValue({
+      configPath: "/tmp/agent-orchestrator.yaml",
+      port: 3000,
+      readyThresholdMs: 300_000,
+      defaults: { runtime: "tmux", agent: "claude-code", workspace: "worktree", notifiers: [] },
+      projects: {
+        "test-project": {
+          path: "/tmp/test-project",
+          tracker: { plugin: "github" },
+          backlogDefaultWorkerRole: "executor",
+        },
+      },
+      notifiers: {},
+      notificationRouting: { urgent: [], action: [], warning: [], info: [] },
+      reactions: {},
+    });
+
+    mockListIssues.mockResolvedValue([
+      {
+        id: "456",
+        title: "Exec Issue",
+        description: "d",
+        url: "https://github.com/test/test/issues/456",
+        state: "open",
+        labels: ["agent:backlog"],
+      },
+    ]);
+
+    mockRegistry.get.mockImplementation((slot: string) => {
+      if (slot === "tracker") {
+        return {
+          name: "github",
+          listIssues: mockListIssues,
+          updateIssue: mockUpdateIssue,
+        };
+      }
+      if (slot === "agent") {
+        return { name: "claude-code" };
+      }
+      if (slot === "runtime") {
+        return { name: "tmux" };
+      }
+      if (slot === "workspace") {
+        return { name: "worktree" };
+      }
+      return null;
+    });
+
+    const { pollBacklog } = await import("../lib/services");
+    await pollBacklog();
+
+    expect(mockSpawn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectId: "test-project",
+        issueId: "456",
+        workerRole: "executor",
+      }),
     );
   });
 });

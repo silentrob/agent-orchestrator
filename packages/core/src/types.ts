@@ -1150,6 +1150,14 @@ export interface ProjectConfig {
    * with an issue id are rejected — disable the flag or use non-executor roles.
    */
   requireIssueLifecycleGates?: boolean;
+
+  /**
+   * Worker role for backlog auto-claim spawns (`pollBacklog`): `planner` (writes `.ao/plan.md`)
+   * or `executor` (implementation-first, legacy behavior).
+   * **Default when omitted:** `planner`.
+   * Does not apply to multi-leaf decomposed runs (those use `executor` per subtask).
+   */
+  backlogDefaultWorkerRole?: "planner" | "executor";
 }
 
 export interface TrackerConfig {

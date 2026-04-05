@@ -102,6 +102,14 @@ projects:
       model: claude-sonnet-4-20250514
       requireApproval: true   # Require human approval before executing
 
+    # ── Backlog auto-claim (optional) ───────────────────────────────
+    # Default when omitted: planner (plan-first). Set to executor for legacy direct implementation.
+    backlogDefaultWorkerRole: planner   # planner | executor
+
+    # ── Issue lifecycle / Trust Vector (optional) ───────────────────
+    # When true, executor-phase spawns with an issue id must satisfy plan + approval + CI gates.
+    requireIssueLifecycleGates: false
+
     # ── Per-project reaction overrides (optional) ─────────────────
     # reactions:
     #   ci-failed:

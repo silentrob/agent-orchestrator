@@ -22,6 +22,44 @@ describe("Config Validation - requireIssueLifecycleGates", () => {
   });
 });
 
+describe("Config Validation - backlogDefaultWorkerRole", () => {
+  it("accepts planner and executor", () => {
+    expect(() =>
+      validateConfig({
+        projects: {
+          a: {
+            path: "/repos/a",
+            repo: "org/a",
+            defaultBranch: "main",
+            backlogDefaultWorkerRole: "planner",
+          },
+          b: {
+            path: "/repos/b",
+            repo: "org/b",
+            defaultBranch: "main",
+            backlogDefaultWorkerRole: "executor",
+          },
+        },
+      }),
+    ).not.toThrow();
+  });
+
+  it("rejects invalid backlogDefaultWorkerRole", () => {
+    expect(() =>
+      validateConfig({
+        projects: {
+          proj1: {
+            path: "/repos/integrator",
+            repo: "org/integrator",
+            defaultBranch: "main",
+            backlogDefaultWorkerRole: "validator",
+          },
+        },
+      }),
+    ).toThrow();
+  });
+});
+
 describe("Config Validation - Project Uniqueness", () => {
   it("rejects duplicate project IDs (same basename)", () => {
     const config = {
