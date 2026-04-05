@@ -44,7 +44,7 @@ const zoneConfig: Record<
   respond: {
     label: "Respond",
     color: "var(--color-status-error)",
-    caption: "Human judgment needed",
+    caption: "Your input is needed",
   },
   review: {
     label: "Review",
@@ -292,7 +292,11 @@ function SessionStateChip({
   if (level === "merge" && session.pr && isPRMergeReady(session.pr)) {
     label = "ready";
   } else if (level === "respond") {
-    label = session.activity === "waiting_input" ? "waiting" : "needs input";
+    if (session.trustGates.trustGateHumanPlanApproval === "pending") {
+      label = "approve plan";
+    } else {
+      label = session.activity === "waiting_input" ? "waiting" : "needs input";
+    }
   } else if (level === "review") {
     label = session.pr?.reviewDecision === "changes_requested" ? "changes" : "review";
   } else if (level === "pending") {

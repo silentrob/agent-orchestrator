@@ -46,7 +46,7 @@ export { CI_STATUS, TERMINAL_STATUSES, TERMINAL_ACTIVITIES, NON_RESTORABLE_STATU
  * Attention zone priority level, ordered by human action urgency:
  *
  * 1. merge   — PR approved + CI green. One click to clear. Highest ROI.
- * 2. respond — Agent waiting for human input. Quick unblock, agent resumes.
+ * 2. respond — Human action required: agent blocked/crashed, or plan awaiting approval.
  * 3. review  — CI failed, changes requested, conflicts. Needs investigation.
  * 4. pending — Waiting on external (reviewer, CI). Nothing to do right now.
  * 5. working — Agents doing their thing. Don't interrupt.
@@ -221,7 +221,13 @@ export function getAttentionLevel(session: DashboardSession): AttentionLevel {
     return "merge";
   }
 
-  // ── Respond: agent is waiting for human input ─────────────────────
+  // ── Respond: human action is needed ──────────────────────────────
+  // Plan approval pending: planner wrote a plan that requires sign-off
+  // before the executor can be spawned. Surface here so it doesn't get
+  // buried in the Working column.
+  if (session.trustGates.trustGateHumanPlanApproval === "pending") {
+    return "respond";
+  }
   // Check status-based error conditions first — these are authoritative
   // and should not be masked by a stale activity value.
   if (

@@ -209,6 +209,24 @@ describe("getAttentionLevel", () => {
       const session = createSession({ activity: "exited" });
       expect(getAttentionLevel(session)).toBe("respond");
     });
+
+    it("should return 'respond' when trustGateHumanPlanApproval is pending", () => {
+      const session = createSession({
+        status: "working",
+        activity: "idle",
+        trustGates: { trustGateHumanPlanApproval: "pending" },
+      });
+      expect(getAttentionLevel(session)).toBe("respond");
+    });
+
+    it("should not return 'respond' when trustGateHumanPlanApproval is satisfied", () => {
+      const session = createSession({
+        status: "working",
+        activity: "idle",
+        trustGates: { trustGateHumanPlanApproval: "satisfied" },
+      });
+      expect(getAttentionLevel(session)).toBe("working");
+    });
   });
 
   describe("review state", () => {
