@@ -33,11 +33,13 @@ import {
   type EventPriority,
   type ProjectConfig as _ProjectConfig,
   type PREnrichmentData,
+  type CIStatus,
 } from "./types.js";
 import { updateMetadata } from "./metadata.js";
 import { getSessionsDir } from "./paths.js";
 import { createCorrelationId, createProjectObserver } from "./observability.js";
 import { resolveAgentSelection, resolveSessionRole } from "./agent-selection.js";
+import { trustGateMetadataKey } from "./issue-lifecycle-gates.js";
 
 /** Parse a duration string like "10m", "30s", "1h" to milliseconds. */
 function parseDuration(str: string): number {
@@ -469,6 +471,7 @@ export function createLifecycleManager(deps: LifecycleManagerDeps): LifecycleMan
 
           // Check CI
           if (cachedData.ciStatus === CI_STATUS.FAILING) return "ci_failed";
+          recordTrustGateCiPassingWhenGreen(session, cachedData.ciStatus);
 
           // Check reviews
           if (cachedData.reviewDecision === "changes_requested")
@@ -502,6 +505,7 @@ export function createLifecycleManager(deps: LifecycleManagerDeps): LifecycleMan
         // Check CI
         const ciStatus = await scm.getCISummary(session.pr);
         if (ciStatus === CI_STATUS.FAILING) return "ci_failed";
+        recordTrustGateCiPassingWhenGreen(session, ciStatus);
 
         // Check reviews
         const reviewDecision = await scm.getReviewDecision(session.pr);
@@ -710,6 +714,18 @@ export function createLifecycleManager(deps: LifecycleManagerDeps): LifecycleMan
       cleaned[key] = value;
     }
     session.metadata = cleaned;
+  }
+
+  /**
+   * When SCM reports CI passing, persist `trustGateCiPassing=satisfied` (0006).
+   * On pending/none/failing we do not write; on CI failure we return before this.
+   * We intentionally do not clear or downgrade on transient red CI — no policy yet.
+   */
+  function recordTrustGateCiPassingWhenGreen(session: Session, ciStatus: CIStatus): void {
+    if (ciStatus !== CI_STATUS.PASSING) return;
+    updateSessionMetadata(session, {
+      [trustGateMetadataKey("ci_passing")]: "satisfied",
+    });
   }
 
   function makeFingerprint(ids: string[]): string {

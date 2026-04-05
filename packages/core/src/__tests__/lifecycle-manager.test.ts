@@ -483,6 +483,47 @@ describe("check (single session)", () => {
     expect(lm.getStates().get("app-1")).toBe("mergeable");
   });
 
+  it("persists trustGateCiPassing satisfied when SCM reports CI passing", async () => {
+    const mockSCM = createMockSCM({
+      getCISummary: vi.fn().mockResolvedValue("passing"),
+      getReviewDecision: vi.fn().mockResolvedValue("pending"),
+    });
+    const registry = createMockRegistry({
+      runtime: plugins.runtime,
+      agent: plugins.agent,
+      scm: mockSCM,
+    });
+
+    const lm = setupCheck("app-1", {
+      session: makeSession({ status: "pr_open", pr: makePR() }),
+      registry,
+    });
+
+    await lm.check("app-1");
+
+    const meta = readMetadataRaw(env.sessionsDir, "app-1");
+    expect(meta?.["trustGateCiPassing"]).toBe("satisfied");
+  });
+
+  it("does not set trustGateCiPassing when CI is failing", async () => {
+    const mockSCM = createMockSCM({ getCISummary: vi.fn().mockResolvedValue("failing") });
+    const registry = createMockRegistry({
+      runtime: plugins.runtime,
+      agent: plugins.agent,
+      scm: mockSCM,
+    });
+
+    const lm = setupCheck("app-1", {
+      session: makeSession({ status: "pr_open", pr: makePR() }),
+      registry,
+    });
+
+    await lm.check("app-1");
+
+    const meta = readMetadataRaw(env.sessionsDir, "app-1");
+    expect(meta?.["trustGateCiPassing"]).toBeUndefined();
+  });
+
   it("throws for nonexistent session", async () => {
     vi.mocked(mockSessionManager.get).mockResolvedValue(null);
 

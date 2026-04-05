@@ -144,7 +144,7 @@ Derived from [`0006_PLAN.md`](./0006_PLAN.md). **Data layer:** **Option A** — 
 
 - **Priority:** Medium
 - **Effort:** M
-- **Status:** `not started`
+- **Status:** `complete`
 - **Description:** In `lifecycle-manager.ts`, when SCM reports CI **passing** for the session’s PR (reuse existing CI summary path ~502–504), write `trustGateCiPassing=satisfied` via `trustGateMetadataKey` + `updateMetadata`. Do not downgrade on transient failures without a defined policy — minimal: set satisfied on green; leave pending otherwise (document in code comment).
 - **Dependencies:** T01
 - **Files to Change:** `packages/core/src/lifecycle-manager.ts`; `packages/core/src/__tests__/lifecycle-manager.test.ts` (if exists) or targeted test
@@ -153,6 +153,12 @@ Derived from [`0006_PLAN.md`](./0006_PLAN.md). **Data layer:** **Option A** — 
   - No new dependency on web; core tests or existing lifecycle tests extended
 
 **API entries used:** `createLifecycleManager` internals; `updateMetadata`; `trustGateMetadataKey` (T01).
+
+**Proof of Work:** `lifecycle-manager.ts` — `recordTrustGateCiPassingWhenGreen` + calls after cached and uncached CI failure checks; uses `updateSessionMetadata` + `trustGateMetadataKey("ci_passing")`.
+
+**Acceptance Criteria Check-off:** ✓ green writes `trustGateCiPassing=satisfied`; ✓ failing leaves key unset; ✓ no web dep.
+
+**Test Artifacts:** `lifecycle-manager.test.ts` — `persists trustGateCiPassing satisfied when SCM reports CI passing`, `does not set trustGateCiPassing when CI is failing`.
 
 ---
 
