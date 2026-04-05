@@ -21,6 +21,7 @@ import type {
   RuntimeHandle,
 } from "../../types.js";
 import { ISSUE_WORKFLOW_PHASE_METADATA_KEY } from "../../issue-lifecycle-types.js";
+import { trustGateMetadataKey } from "../../issue-lifecycle-gates.js";
 import {
   setupTestContext,
   teardownTestContext,
@@ -1080,18 +1081,52 @@ describe("spawn", () => {
     });
   });
 
-  describe("requireIssueLifecycleGates (0005 T06)", () => {
+  describe("requireIssueLifecycleGates (0005 T06 / 0006 T04)", () => {
     afterEach(() => {
       delete config.projects["my-app"]!.requireIssueLifecycleGates;
     });
 
-    it("rejects executor-phase spawn when enabled", async () => {
+    it("rejects executor-phase spawn when Trust gates are not satisfied", async () => {
       config.projects["my-app"]!.requireIssueLifecycleGates = true;
       const sm = createSessionManager({ config, registry: mockRegistry });
       await expect(sm.spawn({ projectId: "my-app", issueId: "INT-900" })).rejects.toThrow(
-        "requireIssueLifecycleGates enabled but Trust Vector gate satisfaction is not yet persisted",
+        /Missing Trust Vector gates:.*ci_passing/,
       );
       expect(mockRuntime.create).not.toHaveBeenCalled();
+    });
+
+    it("allows executor when plan is approved and CI is satisfied from a sibling session", async () => {
+      config.projects["my-app"]!.requireIssueLifecycleGates = true;
+      const wt = join(tmpDir, "wt-exec-gates");
+      mkdirSync(join(wt, ".ao"), { recursive: true });
+      writeFileSync(
+        join(wt, ".ao/plan.md"),
+        "---\nstatus: approved\nrequires_approval: true\n---\nbody\n",
+        "utf-8",
+      );
+      vi.mocked(mockWorkspace.create).mockResolvedValueOnce({
+        path: wt,
+        branch: "feat/INT-999",
+        sessionId: "app-1",
+        projectId: "my-app",
+      });
+
+      writeMetadata(sessionsDir, "app-ci-seed", {
+        worktree: join(tmpDir, "other"),
+        branch: "main",
+        status: "merged",
+        issue: "INT-999",
+        project: "my-app",
+        createdAt: new Date().toISOString(),
+      });
+      updateMetadata(sessionsDir, "app-ci-seed", {
+        [trustGateMetadataKey("ci_passing")]: "satisfied",
+      });
+
+      const sm = createSessionManager({ config, registry: mockRegistry });
+      const session = await sm.spawn({ projectId: "my-app", issueId: "INT-999" });
+      expect(session.issueId).toBe("INT-999");
+      expect(mockRuntime.create).toHaveBeenCalled();
     });
 
     it("allows planner spawn when enabled", async () => {

@@ -121,7 +121,7 @@ Derived from [`0006_PLAN.md`](./0006_PLAN.md). **Data layer:** **Option A** — 
 
 - **Priority:** High
 - **Effort:** M
-- **Status:** `not started`
+- **Status:** `complete`
 - **Description:** When `project.requireIssueLifecycleGates` and resolved spawn phase is **execute**, call **T03** with metadata (pre-spawn empty or existing), **T02** probe when workspace path exists, and `spawnConfig.issueId` / planner metadata keys (`planArtifactRelPath`, `planArtifactIssue`) already set by spawn for planner sessions. **Allow** spawn when gates satisfied; otherwise **throw** listing **missing gates** (operator-actionable). Non-execute phases keep current behavior unless plan specifies otherwise.
 - **Dependencies:** T03
 - **Files to Change:** `packages/core/src/session-manager.ts`; `packages/core/src/__tests__/session-manager/spawn.test.ts`
@@ -131,6 +131,12 @@ Derived from [`0006_PLAN.md`](./0006_PLAN.md). **Data layer:** **Option A** — 
   - Typecheck passes
 
 **API entries used:** `createSessionManager`/`spawn`; `updateMetadata` (indirect if metadata read helpers used); T03 helpers.
+
+**Proof of Work:** `session-manager.ts` — `mergeTrustGateMetadataFromIssueSessions`, post-workspace executor gate block calling `probePlanArtifact` + `listMissingExecutorTrustGates`; cleanup workspace + reserved metadata on failure.
+
+**Acceptance Criteria Check-off:** ✓ failure lists missing gates; ✓ success path with sibling CI + `.ao/plan.md`; ✓ planner/disabled cases preserved; ✓ typecheck.
+
+**Test Artifacts:** `spawn.test.ts` describe `requireIssueLifecycleGates` — rejects when gates missing; allows executor with seed session + plan file.
 
 ---
 

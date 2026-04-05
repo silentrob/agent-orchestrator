@@ -59,6 +59,9 @@ import {
   ISSUE_WORKFLOW_PHASE_METADATA_KEY,
   defaultIssueWorkflowPhaseForSpawn,
 } from "./issue-lifecycle-types.js";
+import { TRUST_GATE_SATISFACTION_PREFIX } from "./issue-lifecycle-gates.js";
+import { listMissingExecutorTrustGates } from "./evaluate-trust-gates.js";
+import { probePlanArtifact } from "./plan-artifact-gates.js";
 import {
   getSessionsDir,
   getWorktreesDir,
@@ -82,6 +85,34 @@ import { resolveAgentSelection, resolveSessionRole } from "./agent-selection.js"
 const execFileAsync = promisify(execFile);
 const OPENCODE_DISCOVERY_TIMEOUT_MS = 10_000;
 const OPENCODE_INTERACTIVE_DISCOVERY_TIMEOUT_MS = 10_000;
+
+/**
+ * Merge `trustGate*` keys from other sessions that share the same tracker issue id.
+ * Used when evaluating executor-phase Trust gates so CI (and other) satisfaction from a prior
+ * session on the same issue can satisfy gates for a new spawn.
+ */
+function mergeTrustGateMetadataFromIssueSessions(
+  sessionsDir: string,
+  issueId: string | undefined,
+  excludeSessionId: SessionId,
+): Record<string, string> {
+  const merged: Record<string, string> = {};
+  if (!issueId?.trim()) return merged;
+  const target = issueId.trim().replace(/^#/, "").toLowerCase();
+  for (const id of listMetadata(sessionsDir)) {
+    if (id === excludeSessionId) continue;
+    const raw = readMetadataRaw(sessionsDir, id);
+    if (!raw) continue;
+    const issue = raw["issue"]?.trim().replace(/^#/, "").toLowerCase();
+    if (issue !== target) continue;
+    for (const [k, v] of Object.entries(raw)) {
+      if (v && k.startsWith(TRUST_GATE_SATISFACTION_PREFIX) && merged[k] === undefined) {
+        merged[k] = v;
+      }
+    }
+  }
+  return merged;
+}
 
 /**
  * Keys emitted by {@link writeMetadata} only. Archive restore rewrites the active file via
@@ -943,20 +974,6 @@ export function createSessionManager(deps: SessionManagerDeps): OpenCodeSessionM
       );
     }
 
-    if (project.requireIssueLifecycleGates) {
-      const phaseForGuard =
-        defaultIssueWorkflowPhaseForSpawn({
-          issueId: spawnConfig.issueId,
-          workerRole: spawnConfig.workerRole,
-        }) ?? (spawnConfig.workerRole === "planner" ? "plan" : undefined);
-      if (phaseForGuard === "execute") {
-        throw new Error(
-          `Project "${spawnConfig.projectId}" has requireIssueLifecycleGates enabled but Trust Vector gate satisfaction is not yet persisted for executor-phase spawns. ` +
-            `Set requireIssueLifecycleGates to false in agent-orchestrator.yaml, or spawn with --worker-role planner, validator, or reproducer until gate metadata is written.`,
-        );
-      }
-    }
-
     const selection = resolveAgentSelection({
       role: "worker",
       project,
@@ -1059,6 +1076,48 @@ export function createSessionManager(deps: SessionManagerDeps): OpenCodeSessionM
           /* best effort */
         }
         throw err;
+      }
+    }
+
+    if (project.requireIssueLifecycleGates) {
+      const phaseForGuard =
+        defaultIssueWorkflowPhaseForSpawn({
+          issueId: spawnConfig.issueId,
+          workerRole: spawnConfig.workerRole,
+        }) ?? (spawnConfig.workerRole === "planner" ? "plan" : undefined);
+      if (phaseForGuard === "execute") {
+        const mergedTrust = mergeTrustGateMetadataFromIssueSessions(
+          sessionsDir,
+          spawnConfig.issueId,
+          sessionId,
+        );
+        const probe = probePlanArtifact(workspacePath, ".ao/plan.md");
+        const missing = listMissingExecutorTrustGates({
+          metadata: mergedTrust,
+          issueId: spawnConfig.issueId,
+          planArtifactIssue: spawnConfig.issueId,
+          probe,
+        });
+        if (missing.length > 0) {
+          if (
+            plugins.workspace &&
+            shouldDestroyWorkspacePath(project, spawnConfig.projectId, workspacePath)
+          ) {
+            try {
+              await plugins.workspace.destroy(workspacePath);
+            } catch {
+              /* best effort */
+            }
+          }
+          try {
+            deleteMetadata(sessionsDir, sessionId, false);
+          } catch {
+            /* best effort */
+          }
+          throw new Error(
+            `Project "${spawnConfig.projectId}" has requireIssueLifecycleGates enabled; executor-phase spawn blocked. Missing Trust Vector gates: ${missing.join(", ")}. `,
+          );
+        }
       }
     }
 
