@@ -89,7 +89,7 @@ Derived from [`0008_PLAN.md`](./0008_PLAN.md) (approved). **North star:** `spawn
 
 - **Priority:** High
 - **Effort:** M
-- **Status:** `not started`
+- **Status:** `complete`
 - **Description:** Implement **one** coherent strategy from `0008_PLAN.md` Implementation (a2): so `probePlanArtifact` used during **advance** to `execute` sees the planner’s `.ao/plan.md` — either **same `workspacePath`** (single session holds plan) or **copy/sync** from planner session path recorded in metadata, or **probe path override** derived from merged issue sessions. Document chosen strategy in code comment. No change to exported `Workspace.create` contract unless explicitly required; prefer metadata-driven probe path inside `advancePhase` implementation.
 - **Dependencies:** none (parallel with T01)
 - **Files to Change:** `packages/core/src/session-manager.ts` (helpers as needed); tests with temp dirs
@@ -98,6 +98,12 @@ Derived from [`0008_PLAN.md`](./0008_PLAN.md) (approved). **North star:** `spawn
   - Unit or integration test proves probe sees plan content after chosen strategy
 
 **API entries used:** `probePlanArtifact`, `readMetadata` / internal metadata paths, **internal** `mergeTrustGateMetadataFromIssueSessions` (same file only).
+
+- **Proof of work:** Added `PlanArtifactProbeLocation` + `resolvePlanArtifactProbeForIssue` in `session-manager.ts` (scan other sessions for same `issue`, prefer `workerRole=planner`, probe until file found; else fall back to current worktree + `.ao/plan.md`). Executor-phase **spawn** guard now uses resolved location for `probePlanArtifact` before `listMissingExecutorTrustGates`. Exported from `packages/core/src/index.ts`.
+- **Acceptance Criteria Check-off:**
+  - ✓ Executor spawn with gates: probe can resolve planner’s tree on same issue (spawn tests pass)
+  - ✓ `plan-probe-resolve.test.ts`: planner worktree preferred; fallback when none
+- **Test Artifacts:** `packages/core/src/__tests__/plan-probe-resolve.test.ts` — 3 tests.
 
 ---
 

@@ -115,6 +115,69 @@ function mergeTrustGateMetadataFromIssueSessions(
 }
 
 /**
+ * Where to run {@link probePlanArtifact} for Trust gate evaluation for an issue-backed session.
+ *
+ * **0008 T02:** The plan file often lives on a **different** session’s worktree (planner wrote
+ * `.ao/plan.md` in `session-a`; executor spawn uses `session-b` with an empty tree). We scan
+ * **other** metadata files for the same `issue`, **preferring `workerRole=planner`**, and return
+ * the first `(worktree, rel)` where the plan exists. If none, fall back to the current session’s
+ * worktree + default rel (probe will be empty — same as pre-0008).
+ */
+export interface PlanArtifactProbeLocation {
+  workspacePath: string;
+  relPath: string;
+}
+
+export function resolvePlanArtifactProbeForIssue(options: {
+  sessionsDir: string;
+  issueId: string | undefined;
+  currentSessionId: SessionId;
+  currentWorkspacePath: string;
+  defaultRelPath?: string;
+}): PlanArtifactProbeLocation {
+  const defaultRel = options.defaultRelPath ?? ".ao/plan.md";
+  const { sessionsDir, issueId, currentSessionId, currentWorkspacePath } = options;
+
+  if (!issueId?.trim()) {
+    return { workspacePath: currentWorkspacePath, relPath: defaultRel };
+  }
+
+  const target = issueId.trim().replace(/^#/, "").toLowerCase();
+
+  type Cand = { worktree: string; rel: string; workerRole?: string };
+  const others: Cand[] = [];
+
+  for (const id of listMetadata(sessionsDir)) {
+    if (id === currentSessionId) continue;
+    const raw = readMetadataRaw(sessionsDir, id);
+    if (!raw) continue;
+    const issue = raw["issue"]?.trim().replace(/^#/, "").toLowerCase();
+    if (issue !== target) continue;
+    const worktree = raw["worktree"]?.trim();
+    if (!worktree) continue;
+    const rel = raw["planArtifactRelPath"]?.trim() || defaultRel;
+    const workerRole = raw["workerRole"]?.trim();
+    others.push({ worktree, rel, workerRole });
+  }
+
+  others.sort((a, b) => {
+    const pa = a.workerRole === "planner" ? 0 : 1;
+    const pb = b.workerRole === "planner" ? 0 : 1;
+    if (pa !== pb) return pa - pb;
+    return 0;
+  });
+
+  for (const c of others) {
+    const p = probePlanArtifact(c.worktree, c.rel);
+    if (p.found) {
+      return { workspacePath: c.worktree, relPath: c.rel };
+    }
+  }
+
+  return { workspacePath: currentWorkspacePath, relPath: defaultRel };
+}
+
+/**
  * Keys emitted by {@link writeMetadata} only. Archive restore rewrites the active file via
  * `writeMetadata` (typed SessionMetadata); any other keys from archived raw must be merged back
  * so extensions (e.g. planner POC: workerRole, planArtifactRelPath) survive for `get` / web API.
@@ -1091,7 +1154,13 @@ export function createSessionManager(deps: SessionManagerDeps): OpenCodeSessionM
           spawnConfig.issueId,
           sessionId,
         );
-        const probe = probePlanArtifact(workspacePath, ".ao/plan.md");
+        const probeLoc = resolvePlanArtifactProbeForIssue({
+          sessionsDir,
+          issueId: spawnConfig.issueId,
+          currentSessionId: sessionId,
+          currentWorkspacePath: workspacePath,
+        });
+        const probe = probePlanArtifact(probeLoc.workspacePath, probeLoc.relPath);
         const missing = listMissingExecutorTrustGates({
           metadata: mergedTrust,
           issueId: spawnConfig.issueId,
