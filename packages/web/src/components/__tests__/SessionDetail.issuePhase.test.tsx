@@ -37,4 +37,32 @@ describe("SessionDetail issue workflow phase", () => {
     );
     expect(screen.queryByTestId("issue-workflow-phase-badge")).toBeNull();
   });
+
+  it("renders trust gate summary when trustGateSummary is set", () => {
+    render(
+      <SessionDetail
+        session={makeSession({
+          id: "gates-1",
+          trustGateSummary: "1✓ humanPlanApproval:p",
+          trustGates: {
+            trustGateCiPassing: "satisfied",
+            trustGateHumanPlanApproval: "pending",
+          },
+        })}
+      />,
+    );
+    expect(screen.getByTestId("trust-gate-summary").textContent).toContain("1✓");
+  });
+
+  it("does not render trust gate chip when trustGateSummary is null", () => {
+    render(
+      <SessionDetail
+        session={makeSession({
+          id: "gates-2",
+          trustGateSummary: null,
+        })}
+      />,
+    );
+    expect(screen.queryByTestId("trust-gate-summary")).toBeNull();
+  });
 });

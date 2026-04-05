@@ -211,7 +211,7 @@ Derived from [`0006_PLAN.md`](./0006_PLAN.md). **Data layer:** **Option A** — 
 
 - **Priority:** Medium
 - **Effort:** M
-- **Status:** `not started`
+- **Status:** `complete`
 - **Description:** Map trust gate keys from `session.metadata` into `DashboardSession` (optional field e.g. `trustGateSummary`) in `sessionToDashboard`. Show compact badge or line on `SessionDetail` / `SessionCard` (Tailwind-only, existing patterns).
 - **Dependencies:** T01
 - **Files to Change:** `packages/web/src/lib/types.ts`; `packages/web/src/lib/serialize.ts`; `packages/web/src/components/SessionDetail.tsx` and/or `SessionCard.tsx`; `packages/web/src/__tests__/*`
@@ -220,6 +220,12 @@ Derived from [`0006_PLAN.md`](./0006_PLAN.md). **Data layer:** **Option A** — 
   - `pnpm --filter @composio/ao-web test` passes
 
 **API entries used:** `sessionToDashboard`; `DashboardSession`.
+
+**Proof of Work:** `types.ts` — `trustGates`, `trustGateSummary`; `serialize.ts` — extract/format (aligned with CLI); `SessionDetail` / `SessionCard` — chip `data-testid="trust-gate-summary"`; test helpers + fixtures updated.
+
+**Acceptance Criteria Check-off:** ✓ serialization + UI; ✓ web tests pass.
+
+**Test Artifacts:** `serialize.test.ts` (trust gate mapping); `SessionDetail.issuePhase.test.tsx` (renders / absent); fixture updates across web tests.
 
 ---
 

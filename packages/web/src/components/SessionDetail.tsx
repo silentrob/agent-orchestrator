@@ -84,6 +84,7 @@ function SessionTopStrip({
   mobileSimple = false,
   rightSlot,
   issueWorkflowPhase,
+  trustGateSummary,
 }: {
   headline: string;
   activityLabel: string;
@@ -96,6 +97,7 @@ function SessionTopStrip({
   mobileSimple?: boolean;
   rightSlot?: ReactNode;
   issueWorkflowPhase?: DashboardSession["issueWorkflowPhase"];
+  trustGateSummary?: DashboardSession["trustGateSummary"];
 }) {
   return (
     <section className={`session-page-header${mobileSimple ? " session-page-header--mobile" : ""}`}>
@@ -150,6 +152,15 @@ function SessionTopStrip({
               </span>
             </div>
             {issueWorkflowPhase ? <IssueWorkflowPhaseBadge phase={issueWorkflowPhase} /> : null}
+            {trustGateSummary ? (
+              <span
+                className="rounded border border-[var(--color-border-default)] bg-[var(--color-chip-bg)] px-2 py-0.5 font-[var(--font-mono)] text-[10px] font-medium text-[var(--color-text-tertiary)]"
+                data-testid="trust-gate-summary"
+                title={`Trust gates: ${trustGateSummary}`}
+              >
+                {trustGateSummary}
+              </span>
+            ) : null}
             {branch ? (
               pr ? (
                 <a
@@ -332,6 +343,7 @@ function OrchestratorStatusStrip({
   crumbHref,
   crumbLabel,
   issueWorkflowPhase,
+  trustGateSummary,
 }: {
   zones: OrchestratorZones;
   createdAt: string;
@@ -343,6 +355,7 @@ function OrchestratorStatusStrip({
   crumbHref: string;
   crumbLabel: string;
   issueWorkflowPhase?: DashboardSession["issueWorkflowPhase"];
+  trustGateSummary?: DashboardSession["trustGateSummary"];
 }) {
   const [uptime, setUptime] = useState<string>("");
 
@@ -382,6 +395,7 @@ function OrchestratorStatusStrip({
         crumbHref={crumbHref}
         crumbLabel={crumbLabel}
         issueWorkflowPhase={issueWorkflowPhase}
+        trustGateSummary={trustGateSummary}
         rightSlot={
           <div className="flex flex-wrap items-center gap-3 lg:justify-end">
             <div className="flex items-baseline gap-1.5 mr-2">
@@ -492,6 +506,7 @@ export function SessionDetail({
           crumbHref={crumbHref}
           crumbLabel={crumbLabel}
           issueWorkflowPhase={session.issueWorkflowPhase}
+          trustGateSummary={session.trustGateSummary}
         />
       )}
 
@@ -509,6 +524,7 @@ export function SessionDetail({
               crumbLabel={crumbLabel}
               mobileSimple={isMobile}
               issueWorkflowPhase={session.issueWorkflowPhase}
+              trustGateSummary={session.trustGateSummary}
             />
           )}
 

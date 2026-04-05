@@ -141,6 +141,29 @@ describe("sessionToDashboard", () => {
     ).toBeNull();
   });
 
+  it("maps trustGate metadata to trustGates and trustGateSummary", () => {
+    const dashboard = sessionToDashboard(
+      createCoreSession({
+        metadata: {
+          trustGateCiPassing: "satisfied",
+          trustGateHumanPlanApproval: "pending",
+        },
+      }),
+    );
+    expect(dashboard.trustGates).toEqual({
+      trustGateCiPassing: "satisfied",
+      trustGateHumanPlanApproval: "pending",
+    });
+    expect(dashboard.trustGateSummary).toContain("1✓");
+    expect(dashboard.trustGateSummary).toContain(":p");
+  });
+
+  it("sets trustGateSummary null when no trust gate keys", () => {
+    const dashboard = sessionToDashboard(createCoreSession());
+    expect(dashboard.trustGates).toEqual({});
+    expect(dashboard.trustGateSummary).toBeNull();
+  });
+
   it("should use agentInfo summary with summaryIsFallback false", () => {
     const coreSession = createCoreSession({
       agentInfo: {
@@ -422,6 +445,8 @@ describe("enrichSessionPR", () => {
       pr: null,
       metadata: {},
       issueWorkflowPhase: null,
+      trustGates: {},
+      trustGateSummary: null,
     };
     const pr = createPRInfo();
     const scm = createMockSCM();
@@ -630,6 +655,8 @@ describe("enrichSessionIssueTitle", () => {
       pr: null,
       metadata: {},
       issueWorkflowPhase: null,
+      trustGates: {},
+      trustGateSummary: null,
       ...overrides,
     };
   }
@@ -984,6 +1011,8 @@ describe("computeStats", () => {
       pr: null,
       metadata: {},
       issueWorkflowPhase: null,
+      trustGates: {},
+      trustGateSummary: null,
       ...overrides,
     };
   }

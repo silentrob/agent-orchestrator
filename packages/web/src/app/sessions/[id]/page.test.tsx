@@ -33,6 +33,8 @@ function makeWorkerSession(): DashboardSession {
     lastActivityAt: new Date().toISOString(),
     pr: null,
     metadata: {},
+    trustGates: {},
+    trustGateSummary: null,
   };
 }
 

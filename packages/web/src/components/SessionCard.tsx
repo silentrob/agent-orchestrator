@@ -244,6 +244,15 @@ function SessionCardView({ session, onSend, onKill, onMerge, onRestore }: Sessio
           {session.issueWorkflowPhase ? (
             <IssueWorkflowPhaseBadge phase={session.issueWorkflowPhase} />
           ) : null}
+          {session.trustGateSummary ? (
+            <span
+              className="rounded border border-[var(--color-border-default)] bg-[var(--color-chip-bg)] px-2 py-0.5 font-[var(--font-mono)] text-[10px] font-medium text-[var(--color-text-tertiary)]"
+              data-testid="trust-gate-summary"
+              title={`Trust gates: ${session.trustGateSummary}`}
+            >
+              {session.trustGateSummary}
+            </span>
+          ) : null}
           {session.branch && (
             <span className="done-meta-chip font-[var(--font-mono)]">
               <svg
@@ -469,6 +478,15 @@ function SessionCardView({ session, onSend, onKill, onMerge, onRestore }: Sessio
         <div className="session-card__meta flex flex-wrap items-center gap-1.5 px-4 pb-2">
           {session.issueWorkflowPhase ? (
             <IssueWorkflowPhaseBadge phase={session.issueWorkflowPhase} />
+          ) : null}
+          {session.trustGateSummary ? (
+            <span
+              className="rounded border border-[var(--color-border-default)] bg-[var(--color-chip-bg)] px-2 py-0.5 font-[var(--font-mono)] text-[10px] font-medium text-[var(--color-text-tertiary)]"
+              data-testid="trust-gate-summary"
+              title={`Trust gates: ${session.trustGateSummary}`}
+            >
+              {session.trustGateSummary}
+            </span>
           ) : null}
           {session.branch && (
             <span className="font-[var(--font-mono)] text-[10px] text-[var(--color-text-muted)]">

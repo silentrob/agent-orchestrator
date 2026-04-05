@@ -81,6 +81,10 @@ export interface DashboardSession {
   metadata: Record<string, string>;
   /** From session metadata `issueWorkflowPhase` when valid (0005); null if absent or unknown. */
   issueWorkflowPhase: IssueWorkflowPhase | null;
+  /** `trustGate*` keys from metadata (0006); empty when none. */
+  trustGates: Record<string, string>;
+  /** Compact summary for UI (mirrors `ao status` Gates column); null when no trust gate keys. */
+  trustGateSummary: string | null;
 }
 
 /**

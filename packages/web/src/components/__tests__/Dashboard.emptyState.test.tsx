@@ -50,6 +50,8 @@ describe("Dashboard empty state", () => {
             pr: null,
             metadata: {},
             issueWorkflowPhase: null,
+            trustGates: {},
+            trustGateSummary: null,
           },
         ]}
       />,

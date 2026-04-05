@@ -19,6 +19,8 @@ export function makeSession(overrides: Partial<DashboardSession> = {}): Dashboar
     lastActivityAt: new Date().toISOString(),
     pr: null,
     metadata: {},
+    trustGates: {},
+    trustGateSummary: null,
     ...overrides,
   };
 }

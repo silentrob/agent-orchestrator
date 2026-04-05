@@ -37,6 +37,8 @@ function createSession(overrides?: Partial<DashboardSession>): DashboardSession 
     pr: null,
     metadata: {},
     issueWorkflowPhase: null,
+    trustGates: {},
+    trustGateSummary: null,
     ...overrides,
   };
 }

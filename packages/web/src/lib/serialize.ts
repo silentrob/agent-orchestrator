@@ -9,6 +9,7 @@ import {
   isOrchestratorSession,
   ISSUE_WORKFLOW_PHASES,
   ISSUE_WORKFLOW_PHASE_METADATA_KEY,
+  TRUST_GATE_SATISFACTION_PREFIX,
   type Session,
   type Agent,
   type SCM,
@@ -40,6 +41,46 @@ function parseIssueWorkflowPhase(metadata: Record<string, string>): IssueWorkflo
     : null;
 }
 
+function extractTrustGateEntries(metadata: Record<string, string>): Record<string, string> {
+  const prefix = TRUST_GATE_SATISFACTION_PREFIX;
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(metadata)) {
+    if (k.startsWith(prefix) && k.length > prefix.length && typeof v === "string") {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
+function trustGateKeyDisplayName(key: string): string {
+  const prefix = TRUST_GATE_SATISFACTION_PREFIX;
+  if (!key.startsWith(prefix)) return key;
+  const rest = key.slice(prefix.length);
+  return rest.charAt(0).toLowerCase() + rest.slice(1);
+}
+
+/** Compact summary aligned with CLI `ao status` Gates column (0006). */
+function formatTrustGateSummary(gates: Record<string, string>): string | null {
+  const entries = Object.entries(gates);
+  if (entries.length === 0) return null;
+
+  const norm = (s: string) => s.trim().toLowerCase();
+  const satisfied = entries.filter(([, v]) => norm(v) === "satisfied").length;
+  const pendingEntries = entries.filter(([, v]) => norm(v) === "pending");
+  const failed = entries.filter(([, v]) => norm(v) === "failed").length;
+
+  const parts: string[] = [];
+  if (satisfied > 0) parts.push(`${satisfied}✓`);
+  if (pendingEntries.length > 0) {
+    const label = trustGateKeyDisplayName(pendingEntries[0][0]);
+    const short = label.length > 9 ? `${label.slice(0, 8)}…` : label;
+    parts.push(pendingEntries.length === 1 ? `${short}:p` : `${pendingEntries.length}p`);
+  }
+  if (failed > 0) parts.push(`${failed}✗`);
+
+  return parts.length > 0 ? parts.join(" ") : "?";
+}
+
 /** Resolve which project a session belongs to. */
 export function resolveProject(
   core: Session,
@@ -62,6 +103,8 @@ export function resolveProject(
 export function sessionToDashboard(session: Session): DashboardSession {
   const agentSummary = session.agentInfo?.summary;
   const summary = agentSummary ?? session.metadata["summary"] ?? null;
+  const trustGates = extractTrustGateEntries(session.metadata);
+  const trustGateSummary = formatTrustGateSummary(trustGates);
 
   return {
     id: session.id,
@@ -80,6 +123,8 @@ export function sessionToDashboard(session: Session): DashboardSession {
     pr: session.pr ? basicPRToDashboard(session.pr) : null,
     metadata: session.metadata,
     issueWorkflowPhase: parseIssueWorkflowPhase(session.metadata),
+    trustGates,
+    trustGateSummary,
   };
 }
 
