@@ -54,7 +54,8 @@ AO already persists per-session rows as **key=value** files under the project se
 ## Recommendation (non-binding)
 
 - **Short term:** Prototype with **session metadata** on a single **canonical** issue session (document how that session is chosen), plus optional **issue-index** for durability if sessions are ephemeral.
-- **Trust gates** satisfied should be representable as a **small set of string keys** or a single serialized structure — exact keys left to implementation.
+- **Trust gates (implemented — plan 0006 MVP):** Option **A** uses **flat session metadata** with one key per `TrustGateKind`, derived in code by `trustGateMetadataKey()` (e.g. `ci_passing` → `trustGateCiPassing`). Stored values are satisfaction strings (`satisfied` \| `pending` \| `failed`). Canonical definitions and the full key map live in [`packages/core/src/issue-lifecycle-gates.ts`](../../packages/core/src/issue-lifecycle-gates.ts) (re-exported from `@composio/ao-core`). The MVP slice includes gates such as **`artifact_plan_present`**, **`human_plan_approval`**, and **`ci_passing`** (see `issue-lifecycle-trust-vector.md` and plan `0006`). Option **B** (a single serialized `trustGateVector` JSON string) remains deferred.
+- **Trust gates** beyond that MVP remain representable as the same **namespaced keys** or a single serialized structure if policy later requires it.
 
 ---
 
@@ -65,4 +66,4 @@ AO already persists per-session rows as **key=value** files under the project se
 
 ---
 
-_Document version: 1.0_
+_Document version: 1.1 — Recommendation updated for 0006 Option A implementation._

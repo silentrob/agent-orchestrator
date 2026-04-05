@@ -2,7 +2,7 @@
 feature_number: 0006
 plan: "./0006_PLAN.md"
 plan_status: approved
-tasks_status: in progress
+tasks_status: complete
 created_at: "2026-04-02T00:00:00Z"
 ---
 
@@ -233,7 +233,7 @@ Derived from [`0006_PLAN.md`](./0006_PLAN.md). **Data layer:** **Option A** — 
 
 - **Priority:** Low
 - **Effort:** S
-- **Status:** `not started`
+- **Status:** `complete`
 - **Description:** Update `docs/specs/issue-lifecycle-state-persistence.md` Recommendation § to reference implemented Option A key names and point to `issue-lifecycle-gates.ts`. No large rewrite.
 - **Dependencies:** T01
 - **Files to Change:** `docs/specs/issue-lifecycle-state-persistence.md`
@@ -242,6 +242,12 @@ Derived from [`0006_PLAN.md`](./0006_PLAN.md). **Data layer:** **Option A** — 
   - Describes Option A as implemented for 0006 MVP
 
 **API entries used:** none (documentation only; aligns with T01 file).
+
+**Proof of Work:** `issue-lifecycle-state-persistence.md` — Recommendation bullets: Option A, `trustGateMetadataKey` / `trustGate*` keys, satisfaction values, link to `packages/core/src/issue-lifecycle-gates.ts`, MVP gate names; v1.1 note.
+
+**Acceptance Criteria Check-off:** ✓ file path; ✓ Option A + 0006 MVP described.
+
+**Test Artifacts:** n/a (documentation only).
 
 ---
 
