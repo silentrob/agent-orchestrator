@@ -84,7 +84,6 @@ export type {
 export { generateOrchestratorPrompt } from "./orchestrator-prompt.js";
 export type { OrchestratorPromptConfig } from "./orchestrator-prompt.js";
 
-
 // Global pause constants and utilities
 export {
   GLOBAL_PAUSE_UNTIL_KEY,
@@ -201,3 +200,7 @@ export type {
   DetectedProjectInfo,
   GenerateConfigOptions,
 } from "./config-generator.js";
+
+// Plan artifact approval write (0007 T01)
+export type { ApprovePlanArtifactResult } from "./plan-artifact-approve.js";
+export { approvePlanArtifactInWorkspace } from "./plan-artifact-approve.js";
