@@ -20,6 +20,7 @@ import type {
   Tracker,
   RuntimeHandle,
 } from "../../types.js";
+import { ISSUE_WORKFLOW_PHASE_METADATA_KEY } from "../../issue-lifecycle-types.js";
 import {
   setupTestContext,
   teardownTestContext,
@@ -1045,6 +1046,34 @@ describe("spawn", () => {
 
       const launchCfg = vi.mocked(mockAgent.getLaunchCommand).mock.calls.at(-1)?.[0];
       expect(launchCfg?.prompt).not.toContain("## Planner role");
+    });
+  });
+
+  describe("issue workflow phase metadata (0005)", () => {
+    it("sets issueWorkflowPhase to execute when issueId is set and workerRole omitted", async () => {
+      const sm = createSessionManager({ config, registry: mockRegistry });
+      const session = await sm.spawn({ projectId: "my-app", issueId: "INT-100" });
+      const raw = readMetadataRaw(sessionsDir, session.id);
+      expect(raw?.[ISSUE_WORKFLOW_PHASE_METADATA_KEY]).toBe("execute");
+      expect(session.metadata[ISSUE_WORKFLOW_PHASE_METADATA_KEY]).toBe("execute");
+    });
+
+    it("sets issueWorkflowPhase to plan for planner", async () => {
+      const sm = createSessionManager({ config, registry: mockRegistry });
+      const session = await sm.spawn({
+        projectId: "my-app",
+        issueId: "INT-200",
+        workerRole: "planner",
+      });
+      const raw = readMetadataRaw(sessionsDir, session.id);
+      expect(raw?.[ISSUE_WORKFLOW_PHASE_METADATA_KEY]).toBe("plan");
+    });
+
+    it("does not set issueWorkflowPhase when issueId is absent", async () => {
+      const sm = createSessionManager({ config, registry: mockRegistry });
+      const session = await sm.spawn({ projectId: "my-app", workerRole: "executor" });
+      const raw = readMetadataRaw(sessionsDir, session.id);
+      expect(raw?.[ISSUE_WORKFLOW_PHASE_METADATA_KEY]).toBeUndefined();
     });
   });
 

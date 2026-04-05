@@ -88,8 +88,17 @@ export { generateOrchestratorPrompt } from "./orchestrator-prompt.js";
 export type { OrchestratorPromptConfig } from "./orchestrator-prompt.js";
 
 // Issue lifecycle (0004) — phase + trust gate vocabulary
-export type { IssueWorkflowPhase, TrustGateKind } from "./issue-lifecycle-types.js";
-export { ISSUE_WORKFLOW_PHASES, TRUST_GATE_KINDS } from "./issue-lifecycle-types.js";
+export type {
+  IssueWorkflowPhase,
+  TrustGateKind,
+  IssueSpawnPhaseContext,
+} from "./issue-lifecycle-types.js";
+export {
+  ISSUE_WORKFLOW_PHASES,
+  TRUST_GATE_KINDS,
+  ISSUE_WORKFLOW_PHASE_METADATA_KEY,
+  defaultIssueWorkflowPhaseForSpawn,
+} from "./issue-lifecycle-types.js";
 
 // Global pause constants and utilities
 export {

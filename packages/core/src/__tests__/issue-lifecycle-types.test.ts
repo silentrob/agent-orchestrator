@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   ISSUE_WORKFLOW_PHASES,
   TRUST_GATE_KINDS,
+  ISSUE_WORKFLOW_PHASE_METADATA_KEY,
+  defaultIssueWorkflowPhaseForSpawn,
   type IssueWorkflowPhase,
   type TrustGateKind,
 } from "../issue-lifecycle-types.js";
@@ -37,5 +39,30 @@ describe("issue-lifecycle-types", () => {
   it("TrustGateKind satisfies exhaustive string union", () => {
     const gates: TrustGateKind[] = [...TRUST_GATE_KINDS];
     expect(gates).toHaveLength(7);
+  });
+
+  it("uses stable metadata key for issue workflow phase", () => {
+    expect(ISSUE_WORKFLOW_PHASE_METADATA_KEY).toBe("issueWorkflowPhase");
+  });
+
+  it("defaultIssueWorkflowPhaseForSpawn returns undefined without issueId", () => {
+    expect(defaultIssueWorkflowPhaseForSpawn({})).toBeUndefined();
+    expect(defaultIssueWorkflowPhaseForSpawn({ issueId: "   " })).toBeUndefined();
+  });
+
+  it("defaultIssueWorkflowPhaseForSpawn maps roles when issueId is set", () => {
+    expect(defaultIssueWorkflowPhaseForSpawn({ issueId: "INT-1" })).toBe("execute");
+    expect(defaultIssueWorkflowPhaseForSpawn({ issueId: "INT-1", workerRole: "planner" })).toBe(
+      "plan",
+    );
+    expect(defaultIssueWorkflowPhaseForSpawn({ issueId: "INT-1", workerRole: "executor" })).toBe(
+      "execute",
+    );
+    expect(defaultIssueWorkflowPhaseForSpawn({ issueId: "INT-1", workerRole: "validator" })).toBe(
+      "validate",
+    );
+    expect(defaultIssueWorkflowPhaseForSpawn({ issueId: "INT-1", workerRole: "reproducer" })).toBe(
+      "reproducer",
+    );
   });
 });

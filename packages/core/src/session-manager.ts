@@ -57,6 +57,10 @@ import {
 import { buildPrompt } from "./prompt-builder.js";
 import { buildPlannerArtifactLayer } from "./prompt/artifact-layers-by-role.js";
 import {
+  ISSUE_WORKFLOW_PHASE_METADATA_KEY,
+  defaultIssueWorkflowPhaseForSpawn,
+} from "./issue-lifecycle-types.js";
+import {
   getSessionsDir,
   getWorktreesDir,
   getProjectBaseDir,
@@ -1208,6 +1212,14 @@ export function createSessionManager(deps: SessionManagerDeps): OpenCodeSessionM
         if (spawnConfig.issueId) {
           session.metadata.planArtifactIssue = spawnConfig.issueId;
         }
+      }
+
+      const defaultPhase = defaultIssueWorkflowPhaseForSpawn({
+        issueId: spawnConfig.issueId,
+        workerRole: spawnConfig.workerRole,
+      });
+      if (defaultPhase !== undefined) {
+        session.metadata[ISSUE_WORKFLOW_PHASE_METADATA_KEY] = defaultPhase;
       }
 
       if (Object.keys(session.metadata || {}).length > 0) {
