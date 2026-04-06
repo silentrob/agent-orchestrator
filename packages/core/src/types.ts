@@ -532,6 +532,9 @@ export interface Tracker {
 
   /** Optional: create a new issue */
   createIssue?(input: CreateIssueInput, project: ProjectConfig): Promise<Issue>;
+
+  /** Optional: list comments on an issue. Used for LGTM/reaction polling. */
+  getIssueComments?(identifier: string, project: ProjectConfig): Promise<IssueComment[]>;
 }
 
 export interface Issue {
@@ -566,6 +569,18 @@ export interface CreateIssueInput {
   labels?: string[];
   assignee?: string;
   priority?: number;
+}
+
+/** A comment on a tracker issue, returned by {@link Tracker.getIssueComments}. */
+export interface IssueComment {
+  /** Platform-specific comment id. */
+  id: string;
+  /** Author login / handle. */
+  author: string;
+  /** Raw comment body text. */
+  body: string;
+  /** ISO8601 creation timestamp. */
+  createdAt: string;
 }
 
 // =============================================================================
