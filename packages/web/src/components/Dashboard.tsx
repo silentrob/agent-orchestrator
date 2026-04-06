@@ -87,6 +87,7 @@ function DashboardInner({
   const [spawnErrors, setSpawnErrors] = useState<Record<string, string>>({});
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [refreshingBacklog, setRefreshingBacklog] = useState(false);
   const isMobile = useMediaQuery(MOBILE_BREAKPOINT);
   const [hasMounted, setHasMounted] = useState(false);
   const [expandedLevel, setExpandedLevel] = useState<MobileAttentionLevel | null>(null);
@@ -388,6 +389,23 @@ function DashboardInner({
     }
   }, [showToast]);
 
+  const handleRefreshBacklog = useCallback(async () => {
+    setRefreshingBacklog(true);
+    try {
+      const res = await fetch("/api/backlog");
+      if (!res.ok) {
+        const text = await res.text();
+        showToast(`Backlog refresh failed: ${text}`, "error");
+      } else {
+        showToast("Backlog refreshed", "success");
+      }
+    } catch {
+      showToast("Network error refreshing backlog", "error");
+    } finally {
+      setRefreshingBacklog(false);
+    }
+  }, [showToast]);
+
   const handleRestore = useCallback(async (sessionId: string) => {
     try {
       const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/restore`, {
@@ -552,6 +570,27 @@ function DashboardInner({
                 ) : null}
                 {!allProjectsView && !isMobile ? (
                   <OrchestratorControl orchestrators={activeOrchestrators} />
+                ) : null}
+                {!isMobile ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleRefreshBacklog()}
+                    disabled={refreshingBacklog}
+                    aria-label="Refresh backlog"
+                    className="orchestrator-btn flex items-center gap-2 px-4 py-2 text-[12px] font-semibold disabled:opacity-50"
+                  >
+                    <svg
+                      className={`h-3.5 w-3.5 opacity-75${refreshingBacklog ? " animate-spin" : ""}`}
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Backlog
+                  </button>
                 ) : null}
                 <ThemeToggle />
               </div>
