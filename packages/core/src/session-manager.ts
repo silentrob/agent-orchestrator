@@ -31,6 +31,9 @@ import {
   type CleanupResult,
   type ClaimPROptions,
   type ClaimPRResult,
+  type AdvancePhaseTarget,
+  type AdvancePhaseOptions,
+  type WorkerRole,
   type OrchestratorConfig,
   type ProjectConfig,
   type Runtime,
@@ -57,10 +60,15 @@ import {
 import { buildPrompt } from "./prompt-builder.js";
 import {
   ISSUE_WORKFLOW_PHASE_METADATA_KEY,
+  ISSUE_WORKFLOW_PHASES,
   defaultIssueWorkflowPhaseForSpawn,
+  type IssueWorkflowPhase,
 } from "./issue-lifecycle-types.js";
 import { TRUST_GATE_SATISFACTION_PREFIX } from "./issue-lifecycle-gates.js";
-import { listMissingExecutorTrustGates } from "./evaluate-trust-gates.js";
+import {
+  listMissingExecutorTrustGates,
+  listMissingTransitionGates,
+} from "./evaluate-trust-gates.js";
 import { probePlanArtifact } from "./plan-artifact-gates.js";
 import {
   getSessionsDir,
@@ -112,6 +120,138 @@ function mergeTrustGateMetadataFromIssueSessions(
     }
   }
   return merged;
+}
+
+/**
+ * Merge trust-gate keys from other issue sessions with the **current** session’s
+ * `trustGate*` keys (current wins on overlap) for transition evaluation (0008 T03).
+ */
+function mergeTrustGateMetadataForGateEvaluation(
+  sessionsDir: string,
+  issueId: string | undefined,
+  excludeSessionId: SessionId,
+  raw: Record<string, string>,
+): Record<string, string> {
+  const merged: Record<string, string> = {};
+  for (const [k, v] of Object.entries(
+    mergeTrustGateMetadataFromIssueSessions(sessionsDir, issueId, excludeSessionId),
+  )) {
+    if (v) merged[k] = v;
+  }
+  for (const [k, v] of Object.entries(raw)) {
+    if (v && k.startsWith(TRUST_GATE_SATISFACTION_PREFIX)) {
+      merged[k] = v;
+    }
+  }
+  return merged;
+}
+
+function parseIssueWorkflowPhase(value: string | undefined): IssueWorkflowPhase | undefined {
+  if (!value?.trim()) return undefined;
+  const v = value.trim();
+  if ((ISSUE_WORKFLOW_PHASES as readonly string[]).includes(v)) {
+    return v as IssueWorkflowPhase;
+  }
+  return undefined;
+}
+
+function inferCurrentIssueWorkflowPhase(raw: Record<string, string>): IssueWorkflowPhase {
+  const fromMeta = parseIssueWorkflowPhase(raw[ISSUE_WORKFLOW_PHASE_METADATA_KEY]);
+  if (fromMeta) return fromMeta;
+  const wr = raw["workerRole"]?.trim();
+  if (wr === "planner" || wr === "executor" || wr === "validator" || wr === "reproducer") {
+    const phase = defaultIssueWorkflowPhaseForSpawn({
+      issueId: raw["issue"],
+      workerRole: wr as WorkerRole,
+    });
+    if (phase) return phase;
+  }
+  return "execute";
+}
+
+function resolveWorkerRoleForAdvance(
+  targetPhase: IssueWorkflowPhase,
+  explicit: WorkerRole | undefined,
+  raw: Record<string, string>,
+): string | undefined {
+  if (explicit) return explicit;
+  switch (targetPhase) {
+    case "reproducer":
+      return "reproducer";
+    case "plan":
+      return "planner";
+    case "execute":
+      return "executor";
+    case "validate":
+      return "validator";
+    case "done":
+      return raw["workerRole"]?.trim() || undefined;
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Where to run {@link probePlanArtifact} for Trust gate evaluation for an issue-backed session.
+ *
+ * **0008 T02:** The plan file often lives on a **different** session’s worktree (planner wrote
+ * `.ao/plan.md` in `session-a`; executor spawn uses `session-b` with an empty tree). We scan
+ * **other** metadata files for the same `issue`, **preferring `workerRole=planner`**, and return
+ * the first `(worktree, rel)` where the plan exists. If none, fall back to the current session’s
+ * worktree + default rel (probe will be empty — same as pre-0008).
+ */
+export interface PlanArtifactProbeLocation {
+  workspacePath: string;
+  relPath: string;
+}
+
+export function resolvePlanArtifactProbeForIssue(options: {
+  sessionsDir: string;
+  issueId: string | undefined;
+  currentSessionId: SessionId;
+  currentWorkspacePath: string;
+  defaultRelPath?: string;
+}): PlanArtifactProbeLocation {
+  const defaultRel = options.defaultRelPath ?? ".ao/plan.md";
+  const { sessionsDir, issueId, currentSessionId, currentWorkspacePath } = options;
+
+  if (!issueId?.trim()) {
+    return { workspacePath: currentWorkspacePath, relPath: defaultRel };
+  }
+
+  const target = issueId.trim().replace(/^#/, "").toLowerCase();
+
+  type Cand = { worktree: string; rel: string; workerRole?: string };
+  const others: Cand[] = [];
+
+  for (const id of listMetadata(sessionsDir)) {
+    if (id === currentSessionId) continue;
+    const raw = readMetadataRaw(sessionsDir, id);
+    if (!raw) continue;
+    const issue = raw["issue"]?.trim().replace(/^#/, "").toLowerCase();
+    if (issue !== target) continue;
+    const worktree = raw["worktree"]?.trim();
+    if (!worktree) continue;
+    const rel = raw["planArtifactRelPath"]?.trim() || defaultRel;
+    const workerRole = raw["workerRole"]?.trim();
+    others.push({ worktree, rel, workerRole });
+  }
+
+  others.sort((a, b) => {
+    const pa = a.workerRole === "planner" ? 0 : 1;
+    const pb = b.workerRole === "planner" ? 0 : 1;
+    if (pa !== pb) return pa - pb;
+    return 0;
+  });
+
+  for (const c of others) {
+    const p = probePlanArtifact(c.worktree, c.rel);
+    if (p.found) {
+      return { workspacePath: c.worktree, relPath: c.rel };
+    }
+  }
+
+  return { workspacePath: currentWorkspacePath, relPath: defaultRel };
 }
 
 /**
@@ -1091,7 +1231,13 @@ export function createSessionManager(deps: SessionManagerDeps): OpenCodeSessionM
           spawnConfig.issueId,
           sessionId,
         );
-        const probe = probePlanArtifact(workspacePath, ".ao/plan.md");
+        const probeLoc = resolvePlanArtifactProbeForIssue({
+          sessionsDir,
+          issueId: spawnConfig.issueId,
+          currentSessionId: sessionId,
+          currentWorkspacePath: workspacePath,
+        });
+        const probe = probePlanArtifact(probeLoc.workspacePath, probeLoc.relPath);
         const missing = listMissingExecutorTrustGates({
           metadata: mergedTrust,
           issueId: spawnConfig.issueId,
@@ -2219,6 +2365,115 @@ export function createSessionManager(deps: SessionManagerDeps): OpenCodeSessionM
     }
   }
 
+  /**
+   * Advance issue workflow phase, persist metadata, and send composed prompt (0008 T03).
+   *
+   * `options.skipGateCheck` bypasses trust-gate evaluation — intended for automated tests or
+   * explicit operator override; unsafe for production when `requireIssueLifecycleGates` is enabled.
+   */
+  async function advancePhase(
+    sessionId: SessionId,
+    target: AdvancePhaseTarget,
+    options?: AdvancePhaseOptions,
+  ): Promise<Session> {
+    const { raw, sessionsDir, project, projectId } = requireSessionRecord(sessionId);
+
+    if (isOrchestratorSessionRecord(sessionId, raw)) {
+      throw new Error(`Cannot advance phase for orchestrator session ${sessionId}`);
+    }
+
+    const workspacePath = raw["worktree"]?.trim();
+    if (!workspacePath) {
+      throw new Error(`Session ${sessionId} has no worktree; cannot advance phase`);
+    }
+
+    const issueId = raw["issue"]?.trim();
+    const fromPhase = inferCurrentIssueWorkflowPhase(raw);
+    const skipGateCheck = options?.skipGateCheck === true;
+
+    if (project.requireIssueLifecycleGates && !skipGateCheck) {
+      const mergedTrust = mergeTrustGateMetadataForGateEvaluation(
+        sessionsDir,
+        issueId,
+        sessionId,
+        raw,
+      );
+      const probeLoc = resolvePlanArtifactProbeForIssue({
+        sessionsDir,
+        issueId,
+        currentSessionId: sessionId,
+        currentWorkspacePath: workspacePath,
+      });
+      const probe = probePlanArtifact(probeLoc.workspacePath, probeLoc.relPath);
+      const planArtifactIssue = raw["planArtifactIssue"]?.trim() ?? issueId;
+      const missing = listMissingTransitionGates(fromPhase, target.phase, {
+        metadata: mergedTrust,
+        issueId,
+        planArtifactIssue,
+        probe,
+      });
+      if (missing.length > 0) {
+        throw new Error(
+          `Project "${projectId}" has requireIssueLifecycleGates enabled; phase advance blocked. Missing Trust Vector gates: ${missing.join(", ")}. `,
+        );
+      }
+    }
+
+    const metaUpdates: Record<string, string> = {
+      [ISSUE_WORKFLOW_PHASE_METADATA_KEY]: target.phase,
+    };
+    const resolvedRole = resolveWorkerRoleForAdvance(target.phase, target.workerRole, raw);
+    if (resolvedRole !== undefined) {
+      metaUpdates.workerRole = resolvedRole;
+    }
+    if (metaUpdates.workerRole === "planner" || target.phase === "plan") {
+      metaUpdates.planArtifactRelPath = raw["planArtifactRelPath"]?.trim() || ".ao/plan.md";
+      if (issueId) {
+        metaUpdates.planArtifactIssue = issueId;
+      }
+    }
+
+    updateMetadata(sessionsDir, sessionId, metaUpdates);
+
+    const selection = resolveSelectionForSession(project, sessionId, raw);
+    const plugins = resolvePlugins(project, selection.agentName);
+    let issueContext: string | undefined;
+    if (issueId && plugins.tracker) {
+      try {
+        issueContext = await plugins.tracker.generatePrompt(issueId, project);
+      } catch {
+        /* non-fatal */
+      }
+    }
+
+    const userPrompt = `The orchestrator advanced this session to workflow phase "${target.phase}". Continue according to the phase guidance below.`;
+
+    let composedPrompt = buildPrompt({
+      project,
+      projectId,
+      issueId,
+      issueContext,
+      userPrompt,
+      issueWorkflowPhase: target.phase,
+    });
+
+    if (target.phase === "plan") {
+      const defaultPlanRel = ".ao/plan.md";
+      const planAbsPath = join(workspacePath, defaultPlanRel);
+      if (existsSync(planAbsPath)) {
+        composedPrompt += `\n\n## Existing plan on disk\n\nA file already exists at \`${planAbsPath}\`. Read it, preserve valid YAML frontmatter, and update the plan body as needed rather than discarding it.`;
+      }
+    }
+
+    await send(sessionId, composedPrompt);
+
+    const updated = await get(sessionId);
+    if (!updated) {
+      throw new SessionNotFoundError(sessionId);
+    }
+    return updated;
+  }
+
   async function claimPR(
     sessionId: SessionId,
     prRef: string,
@@ -2579,5 +2834,17 @@ export function createSessionManager(deps: SessionManagerDeps): OpenCodeSessionM
     return restoredSession;
   }
 
-  return { spawn, spawnOrchestrator, restore, list, get, kill, cleanup, send, claimPR, remap };
+  return {
+    spawn,
+    spawnOrchestrator,
+    restore,
+    list,
+    get,
+    kill,
+    cleanup,
+    send,
+    advancePhase,
+    claimPR,
+    remap,
+  };
 }

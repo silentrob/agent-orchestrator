@@ -1,4 +1,5 @@
 import type { ObservabilityLevel } from "./observability.js";
+import type { IssueWorkflowPhase } from "./issue-lifecycle-types.js";
 
 /**
  * Agent Orchestrator — Core Type Definitions
@@ -201,6 +202,21 @@ export function isOrchestratorSession(session: {
  * Optional on spawn; when omitted, behavior matches pre-role workers.
  */
 export type WorkerRole = "planner" | "executor" | "validator" | "reproducer";
+
+/** Target phase (and optional worker role) for {@link SessionManager.advancePhase} (0008). */
+export interface AdvancePhaseTarget {
+  phase: IssueWorkflowPhase;
+  workerRole?: WorkerRole;
+}
+
+/** Options for {@link SessionManager.advancePhase}. */
+export interface AdvancePhaseOptions {
+  /**
+   * When true, skips trust-gate evaluation for this transition. Intended for
+   * automated tests and explicit operator override; unsafe for routine use.
+   */
+  skipGateCheck?: boolean;
+}
 
 /** Config for creating a new session */
 export interface SessionSpawnConfig {
@@ -1327,6 +1343,15 @@ export interface SessionManager {
   ): Promise<CleanupResult>;
   send(sessionId: SessionId, message: string): Promise<void>;
   claimPR(sessionId: SessionId, prRef: string, options?: ClaimPROptions): Promise<ClaimPRResult>;
+  /**
+   * Advance issue workflow phase and push updated prompt guidance to the session (0008).
+   * Optional on the interface for mocks; concrete managers implement it.
+   */
+  advancePhase?(
+    sessionId: SessionId,
+    target: AdvancePhaseTarget,
+    options?: AdvancePhaseOptions,
+  ): Promise<Session>;
 }
 
 /** OpenCode-specific session manager with remap capability */

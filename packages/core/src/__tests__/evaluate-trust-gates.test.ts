@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   isPlanIssueAligned,
   listMissingExecutorTrustGates,
+  listMissingTransitionGates,
   MVP_EXECUTOR_TRUST_GATE_KINDS,
 } from "../evaluate-trust-gates.js";
 import { trustGateMetadataKey } from "../issue-lifecycle-gates.js";
@@ -109,5 +110,68 @@ describe("listMissingExecutorTrustGates", () => {
     const missing = listMissingExecutorTrustGates(ctx);
     expect(missing.every((g) => MVP_EXECUTOR_TRUST_GATE_KINDS.includes(g))).toBe(true);
     expect(missing).toEqual(["artifact_plan_present", "human_plan_approval", "ci_passing"]);
+  });
+});
+
+describe("listMissingTransitionGates", () => {
+  const emptyCtx = {
+    metadata: {},
+    issueId: "1",
+    probe: null as PlanFrontmatterProbeResult | null,
+  };
+
+  it("returns empty when from === to", () => {
+    expect(listMissingTransitionGates("plan", "plan", emptyCtx)).toEqual([]);
+    expect(listMissingTransitionGates("execute", "execute", emptyCtx)).toEqual([]);
+  });
+
+  it("delegates to listMissingExecutorTrustGates when to === execute", () => {
+    const ctx = {
+      metadata: metaCi("satisfied"),
+      issueId: "1",
+      probe: null,
+    };
+    expect(listMissingTransitionGates("plan", "execute", ctx)).toEqual(
+      listMissingExecutorTrustGates(ctx),
+    );
+  });
+
+  it("lists verification gates for execute → validate when metadata unset", () => {
+    expect(listMissingTransitionGates("execute", "validate", emptyCtx)).toEqual([
+      "artifact_verification_present",
+      "validation_signoff",
+    ]);
+  });
+
+  it("returns empty for execute → validate when both gates satisfied", () => {
+    const meta = {
+      ...metaCi("satisfied"),
+      [trustGateMetadataKey("artifact_verification_present")]: "satisfied",
+      [trustGateMetadataKey("validation_signoff")]: "satisfied",
+    };
+    const ctx = { metadata: meta, issueId: "1", probe: null };
+    expect(listMissingTransitionGates("execute", "validate", ctx)).toEqual([]);
+  });
+
+  it("lists validation_signoff for validate → done when unset", () => {
+    expect(listMissingTransitionGates("validate", "done", emptyCtx)).toEqual(["validation_signoff"]);
+  });
+
+  it("returns empty for validate → done when validation_signoff satisfied", () => {
+    const meta = {
+      [trustGateMetadataKey("validation_signoff")]: "satisfied",
+    };
+    expect(listMissingTransitionGates("validate", "done", { ...emptyCtx, metadata: meta })).toEqual(
+      [],
+    );
+  });
+
+  it("lists issue_reproduced for reproducer → plan when unset", () => {
+    expect(listMissingTransitionGates("reproducer", "plan", emptyCtx)).toEqual(["issue_reproduced"]);
+  });
+
+  it("returns empty for unknown transition pairs (documented stub)", () => {
+    expect(listMissingTransitionGates("plan", "done", emptyCtx)).toEqual([]);
+    expect(listMissingTransitionGates("done", "validate", emptyCtx)).toEqual([]);
   });
 });

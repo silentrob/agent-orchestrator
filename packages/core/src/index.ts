@@ -50,8 +50,11 @@ export {
 } from "./tmux.js";
 
 // Session manager — session CRUD
-export { createSessionManager } from "./session-manager.js";
-export type { SessionManagerDeps } from "./session-manager.js";
+export {
+  createSessionManager,
+  resolvePlanArtifactProbeForIssue,
+} from "./session-manager.js";
+export type { SessionManagerDeps, PlanArtifactProbeLocation } from "./session-manager.js";
 
 // Lifecycle manager — state machine + reaction engine
 export { createLifecycleManager } from "./lifecycle-manager.js";
@@ -122,6 +125,7 @@ export {
   MVP_EXECUTOR_TRUST_GATE_KINDS,
   isPlanIssueAligned,
   listMissingExecutorTrustGates,
+  listMissingTransitionGates,
 } from "./evaluate-trust-gates.js";
 
 // Global pause constants and utilities

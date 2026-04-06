@@ -48,6 +48,7 @@ const {
     spawnOrchestrator: vi.fn(),
     send: vi.fn(),
     claimPR: vi.fn(),
+    advancePhase: vi.fn(),
   },
   sessionsDirRef: { current: "" },
 }));
@@ -206,6 +207,7 @@ beforeEach(() => {
   mockSessionManager.spawn.mockReset();
   mockSessionManager.send.mockReset();
   mockSessionManager.claimPR.mockReset();
+  mockSessionManager.advancePhase.mockReset();
 
   mockSpawn.mockImplementation(() => makeMockChild(0));
 
@@ -242,6 +244,21 @@ beforeEach(() => {
     githubAssigned: false,
     takenOverFrom: [],
   });
+  mockSessionManager.advancePhase.mockResolvedValue({
+    id: "app-1",
+    projectId: "my-app",
+    status: "working",
+    activity: "active",
+    branch: "feat/x",
+    issueId: "INT-1",
+    pr: null,
+    workspacePath: "/tmp/w",
+    runtimeHandle: { id: "rt", runtimeName: "mock", data: {} },
+    agentInfo: null,
+    createdAt: new Date(),
+    lastActivityAt: new Date(),
+    metadata: { issueWorkflowPhase: "execute", workerRole: "executor" },
+  } satisfies Session);
 });
 
 afterEach(() => {
@@ -677,5 +694,81 @@ describe("session remap", () => {
     await expect(program.parseAsync(["node", "test", "session", "remap", "app-1"])).rejects.toThrow(
       "process.exit(1)",
     );
+  });
+});
+
+describe("session advance", () => {
+  it("calls advancePhase with target phase and optional worker role", async () => {
+    await program.parseAsync([
+      "node",
+      "test",
+      "session",
+      "advance",
+      "app-1",
+      "--phase",
+      "execute",
+      "--worker-role",
+      "executor",
+    ]);
+
+    expect(mockSessionManager.advancePhase).toHaveBeenCalledWith(
+      "app-1",
+      { phase: "execute", workerRole: "executor" },
+      { skipGateCheck: false },
+    );
+    const output = consoleSpy.mock.calls.map((c) => String(c[0])).join("\n");
+    expect(output).toContain('advanced to workflow phase "execute"');
+    expect(output).toContain("Worker role: executor");
+  });
+
+  it("passes skipGateCheck when flag is set", async () => {
+    await program.parseAsync([
+      "node",
+      "test",
+      "session",
+      "advance",
+      "app-1",
+      "--phase",
+      "validate",
+      "--skip-gate-check",
+    ]);
+
+    expect(mockSessionManager.advancePhase).toHaveBeenCalledWith(
+      "app-1",
+      { phase: "validate" },
+      { skipGateCheck: true },
+    );
+  });
+
+  it("prints gate kinds and hint when advance is blocked by trust gates", async () => {
+    mockSessionManager.advancePhase.mockRejectedValueOnce(
+      new Error(
+        'Project "my-app" has requireIssueLifecycleGates enabled; phase advance blocked. Missing Trust Vector gates: human_plan_approval, ci_passing. ',
+      ),
+    );
+
+    await expect(
+      program.parseAsync(["node", "test", "session", "advance", "app-1", "--phase", "execute"]),
+    ).rejects.toThrow("process.exit(1)");
+
+    const errOutput = vi
+      .mocked(console.error)
+      .mock.calls.map((c) => String(c[0]))
+      .join("\n");
+    expect(errOutput).toContain("Missing Trust Vector gates: human_plan_approval, ci_passing");
+    expect(errOutput).toContain("--skip-gate-check");
+  });
+
+  it("rejects invalid phase", async () => {
+    await expect(
+      program.parseAsync(["node", "test", "session", "advance", "app-1", "--phase", "nope"]),
+    ).rejects.toThrow("process.exit(1)");
+
+    const errOutput = vi
+      .mocked(console.error)
+      .mock.calls.map((c) => String(c[0]))
+      .join("\n");
+    expect(errOutput).toContain("Invalid phase");
+    expect(mockSessionManager.advancePhase).not.toHaveBeenCalled();
   });
 });

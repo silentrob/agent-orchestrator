@@ -108,6 +108,8 @@ projects:
 
     # ── Issue lifecycle / Trust Vector (optional) ───────────────────
     # When true, executor-phase spawns with an issue id must satisfy plan + approval + CI gates.
+    # Phase moves on an existing session: ao session advance <session> --phase <phase> (gates + prompt).
+    # Preview blockers: ao status (Advance column / advanceBlocked in JSON).
     requireIssueLifecycleGates: false
 
     # ── Per-project reaction overrides (optional) ─────────────────

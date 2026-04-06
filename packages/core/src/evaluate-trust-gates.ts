@@ -6,7 +6,7 @@
  * from metadata when the planner wrote those keys.
  */
 
-import type { TrustGateKind } from "./issue-lifecycle-types.js";
+import type { IssueWorkflowPhase, TrustGateKind } from "./issue-lifecycle-types.js";
 import type { PlanFrontmatterProbeResult } from "./plan-artifact-gates.js";
 import { trustGateMetadataKey } from "./issue-lifecycle-gates.js";
 
@@ -91,4 +91,70 @@ function isHumanPlanApprovalSatisfied(probe: PlanFrontmatterProbeResult | null):
 function sortMvpGates(gates: TrustGateKind[]): TrustGateKind[] {
   const order = MVP_EXECUTOR_TRUST_GATE_KINDS;
   return [...gates].sort((a, b) => order.indexOf(a) - order.indexOf(b));
+}
+
+/** MVP ordering for execute → validate transition (0008). */
+const VALIDATE_TRANSITION_GATE_ORDER: readonly TrustGateKind[] = [
+  "artifact_verification_present",
+  "validation_signoff",
+];
+
+function sortValidateTransitionGates(gates: TrustGateKind[]): TrustGateKind[] {
+  const order = VALIDATE_TRANSITION_GATE_ORDER;
+  return [...gates].sort((a, b) => order.indexOf(a) - order.indexOf(b));
+}
+
+function isTrustGateMetadataSatisfied(metadata: Record<string, string>, kind: TrustGateKind): boolean {
+  return metadata[trustGateMetadataKey(kind)] === "satisfied";
+}
+
+/**
+ * Returns Trust Vector gates that are **not** satisfied for a phase transition (`0008` Delta §2).
+ *
+ * - **Into `execute`:** same MVP rules as {@link listMissingExecutorTrustGates} (plan artifact + CI).
+ * - **`execute` → `validate`:** requires `artifact_verification_present` and `validation_signoff` metadata.
+ * - **`validate` → `done`:** requires `validation_signoff` metadata.
+ * - **`reproducer` → `plan`:** requires `issue_reproduced` metadata.
+ * - **`from === to`:** no gates.
+ * - **Other pairs:** empty list (no MVP gates; forward/backward skips not policy-enforced here).
+ */
+export function listMissingTransitionGates(
+  from: IssueWorkflowPhase,
+  to: IssueWorkflowPhase,
+  ctx: ExecutorTrustGateContext,
+): TrustGateKind[] {
+  if (from === to) {
+    return [];
+  }
+
+  if (to === "execute") {
+    return listMissingExecutorTrustGates(ctx);
+  }
+
+  if (from === "execute" && to === "validate") {
+    const missing = new Set<TrustGateKind>();
+    if (!isTrustGateMetadataSatisfied(ctx.metadata, "artifact_verification_present")) {
+      missing.add("artifact_verification_present");
+    }
+    if (!isTrustGateMetadataSatisfied(ctx.metadata, "validation_signoff")) {
+      missing.add("validation_signoff");
+    }
+    return sortValidateTransitionGates([...missing]);
+  }
+
+  if (from === "validate" && to === "done") {
+    if (!isTrustGateMetadataSatisfied(ctx.metadata, "validation_signoff")) {
+      return ["validation_signoff"];
+    }
+    return [];
+  }
+
+  if (from === "reproducer" && to === "plan") {
+    if (!isTrustGateMetadataSatisfied(ctx.metadata, "issue_reproduced")) {
+      return ["issue_reproduced"];
+    }
+    return [];
+  }
+
+  return [];
 }

@@ -11,11 +11,19 @@ import {
   type Tracker,
   type ProjectConfig,
   type IssueWorkflowPhase,
+  type WorkerRole,
   ISSUE_WORKFLOW_PHASES,
   ISSUE_WORKFLOW_PHASE_METADATA_KEY,
   isOrchestratorSession,
   loadConfig,
   TRUST_GATE_SATISFACTION_PREFIX,
+  defaultIssueWorkflowPhaseForSpawn,
+  listMissingTransitionGates,
+  probePlanArtifact,
+  resolvePlanArtifactProbeForIssue,
+  listMetadata,
+  readMetadataRaw,
+  getSessionsDir,
 } from "@composio/ao-core";
 import { git, getTmuxSessions, getTmuxActivity } from "../lib/shell.js";
 import {
@@ -52,6 +60,11 @@ interface SessionInfo {
   trustGates: Record<string, string>;
   /** Compact gates summary for the table, or null when no trust gate keys. */
   trustGateSummary: string | null;
+  /**
+   * When `requireIssueLifecycleGates` is on, preview of missing gates for the canonical
+   * next phase (same evaluation as `ao session advance`), e.g. `→execute: human_plan_approval`.
+   */
+  advanceBlocked: string | null;
 }
 
 interface StatusOptions {
@@ -98,6 +111,110 @@ function trustGateKeyDisplayName(key: string): string {
  * Compact summary: satisfied count, first pending gate short name, failed count.
  * Fits the CLI gates column (see COL.gates).
  */
+function mergeTrustGateMetadataFromIssueSessionsCli(
+  sessionsDir: string,
+  issueId: string | undefined,
+  excludeSessionId: string,
+): Record<string, string> {
+  const merged: Record<string, string> = {};
+  if (!issueId?.trim()) return merged;
+  const target = issueId.trim().replace(/^#/, "").toLowerCase();
+  for (const id of listMetadata(sessionsDir)) {
+    if (id === excludeSessionId) continue;
+    const raw = readMetadataRaw(sessionsDir, id);
+    if (!raw) continue;
+    const issue = raw["issue"]?.trim().replace(/^#/, "").toLowerCase();
+    if (issue !== target) continue;
+    for (const [k, v] of Object.entries(raw)) {
+      if (v && k.startsWith(TRUST_GATE_SATISFACTION_PREFIX) && merged[k] === undefined) {
+        merged[k] = v;
+      }
+    }
+  }
+  return merged;
+}
+
+function mergeTrustGateMetadataForGateEvaluationCli(
+  sessionsDir: string,
+  issueId: string | undefined,
+  excludeSessionId: string,
+  raw: Record<string, string>,
+): Record<string, string> {
+  const merged: Record<string, string> = {};
+  for (const [k, v] of Object.entries(
+    mergeTrustGateMetadataFromIssueSessionsCli(sessionsDir, issueId, excludeSessionId),
+  )) {
+    if (v) merged[k] = v;
+  }
+  for (const [k, v] of Object.entries(raw)) {
+    if (v && k.startsWith(TRUST_GATE_SATISFACTION_PREFIX)) {
+      merged[k] = v;
+    }
+  }
+  return merged;
+}
+
+function inferCurrentIssueWorkflowPhaseForStatus(
+  metadata: Record<string, string>,
+  issueId: string,
+): IssueWorkflowPhase {
+  const fromMeta = parseIssueWorkflowPhaseFromMetadata(metadata);
+  if (fromMeta) return fromMeta;
+  const wr = metadata["workerRole"]?.trim();
+  if (wr === "planner" || wr === "executor" || wr === "validator" || wr === "reproducer") {
+    const phase = defaultIssueWorkflowPhaseForSpawn({
+      issueId,
+      workerRole: wr as WorkerRole,
+    });
+    if (phase) return phase;
+  }
+  return "execute";
+}
+
+function nextWorkflowPhaseInPath(current: IssueWorkflowPhase): IssueWorkflowPhase | null {
+  const idx = ISSUE_WORKFLOW_PHASES.indexOf(current);
+  if (idx === -1 || idx >= ISSUE_WORKFLOW_PHASES.length - 1) return null;
+  return ISSUE_WORKFLOW_PHASES[idx + 1] ?? null;
+}
+
+async function computeAdvanceBlocked(
+  session: Session,
+  fullConfig: ReturnType<typeof loadConfig>,
+): Promise<string | null> {
+  const project = fullConfig.projects[session.projectId];
+  if (!project?.requireIssueLifecycleGates) return null;
+  if (isOrchestratorSession(session)) return null;
+  if (!session.issueId?.trim() || !session.workspacePath) return null;
+
+  const sessionsDir = getSessionsDir(fullConfig.configPath ?? "", project.path);
+  const fromPhase = inferCurrentIssueWorkflowPhaseForStatus(session.metadata, session.issueId);
+  const toPhase = nextWorkflowPhaseInPath(fromPhase);
+  if (!toPhase) return null;
+
+  const merged = mergeTrustGateMetadataForGateEvaluationCli(
+    sessionsDir,
+    session.issueId.trim(),
+    session.id,
+    session.metadata,
+  );
+  const probeLoc = resolvePlanArtifactProbeForIssue({
+    sessionsDir,
+    issueId: session.issueId,
+    currentSessionId: session.id,
+    currentWorkspacePath: session.workspacePath,
+  });
+  const probe = probePlanArtifact(probeLoc.workspacePath, probeLoc.relPath);
+  const planArtifactIssue = session.metadata["planArtifactIssue"]?.trim() ?? session.issueId;
+  const missing = listMissingTransitionGates(fromPhase, toPhase, {
+    metadata: merged,
+    issueId: session.issueId,
+    planArtifactIssue,
+    probe,
+  });
+  if (missing.length === 0) return null;
+  return `→${toPhase}: ${missing.join(", ")}`;
+}
+
 function formatTrustGateSummary(gates: Record<string, string>): string | null {
   const entries = Object.entries(gates);
   if (entries.length === 0) return null;
@@ -211,6 +328,8 @@ async function gatherSessionInfo(
     }
   }
 
+  const advanceBlocked = await computeAdvanceBlocked(session, projectConfig);
+
   return {
     name: session.id,
     role: isOrchestratorSession(session) ? "orchestrator" : "worker",
@@ -230,6 +349,7 @@ async function gatherSessionInfo(
     issueWorkflowPhase,
     trustGates,
     trustGateSummary,
+    advanceBlocked,
   };
 }
 
@@ -237,6 +357,7 @@ async function gatherSessionInfo(
 const COL = {
   session: 14,
   phase: 10,
+  advance: 22,
   gates: 14,
   branch: 24,
   pr: 6,
@@ -251,6 +372,7 @@ function printTableHeader(): void {
   const hdr =
     padCol("Session", COL.session) +
     padCol("Phase", COL.phase) +
+    padCol("Advance", COL.advance) +
     padCol("Gates", COL.gates) +
     padCol("Branch", COL.branch) +
     padCol("PR", COL.pr) +
@@ -263,6 +385,7 @@ function printTableHeader(): void {
   const totalWidth =
     COL.session +
     COL.phase +
+    COL.advance +
     COL.gates +
     COL.branch +
     COL.pr +
@@ -282,6 +405,10 @@ function printSessionRow(info: SessionInfo): void {
     padCol(
       info.issueWorkflowPhase ? chalk.dim(info.issueWorkflowPhase) : chalk.dim("-"),
       COL.phase,
+    ) +
+    padCol(
+      info.advanceBlocked ? chalk.yellow(info.advanceBlocked) : chalk.dim("-"),
+      COL.advance,
     ) +
     padCol(
       info.trustGateSummary ? chalk.dim(info.trustGateSummary) : chalk.dim("-"),
