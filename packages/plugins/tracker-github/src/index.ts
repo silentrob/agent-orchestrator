@@ -10,6 +10,7 @@ import type {
   PluginModule,
   Tracker,
   Issue,
+  IssueComment,
   IssueFilters,
   IssueUpdate,
   CreateIssueInput,
@@ -349,6 +350,31 @@ function createGitHubTracker(): Tracker {
       const number = match[1];
 
       return this.getIssue(number, project);
+    },
+
+    async getIssueComments(identifier: string, project: ProjectConfig): Promise<IssueComment[]> {
+      const raw = await gh([
+        "issue",
+        "comment",
+        "list",
+        identifier,
+        "--repo",
+        project.repo,
+        "--json",
+        "id,author,body,createdAt",
+      ]);
+      const comments: Array<{
+        id: number;
+        author: { login: string };
+        body: string;
+        createdAt: string;
+      }> = JSON.parse(raw);
+      return comments.map((c) => ({
+        id: String(c.id),
+        author: c.author.login,
+        body: c.body,
+        createdAt: c.createdAt,
+      }));
     },
   };
 }

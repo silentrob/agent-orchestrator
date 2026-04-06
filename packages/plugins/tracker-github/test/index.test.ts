@@ -464,4 +464,57 @@ describe("tracker-github plugin", () => {
       ).rejects.toThrow("Failed to parse issue URL");
     });
   });
+
+  // ---- getIssueComments --------------------------------------------------
+
+  describe("getIssueComments", () => {
+    const sampleComments = [
+      {
+        id: 111,
+        author: { login: "alice" },
+        body: "LGTM",
+        createdAt: "2026-04-06T10:00:00Z",
+      },
+      {
+        id: 222,
+        author: { login: "bob" },
+        body: "Please clarify step 2",
+        createdAt: "2026-04-06T11:00:00Z",
+      },
+    ];
+
+    it("returns mapped IssueComment array", async () => {
+      mockGh(sampleComments);
+      const comments = await tracker.getIssueComments!("42", project);
+      expect(comments).toEqual([
+        { id: "111", author: "alice", body: "LGTM", createdAt: "2026-04-06T10:00:00Z" },
+        { id: "222", author: "bob", body: "Please clarify step 2", createdAt: "2026-04-06T11:00:00Z" },
+      ]);
+    });
+
+    it("calls gh with correct arguments", async () => {
+      mockGh(sampleComments);
+      await tracker.getIssueComments!("42", project);
+      expect(ghMock).toHaveBeenCalledWith(
+        "gh",
+        expect.arrayContaining([
+          "issue", "comment", "list", "42",
+          "--repo", "acme/repo",
+          "--json", "id,author,body,createdAt",
+        ]),
+        expect.any(Object),
+      );
+    });
+
+    it("returns empty array when there are no comments", async () => {
+      mockGh([]);
+      const comments = await tracker.getIssueComments!("42", project);
+      expect(comments).toEqual([]);
+    });
+
+    it("propagates gh CLI errors", async () => {
+      mockGhError("comment list failed");
+      await expect(tracker.getIssueComments!("42", project)).rejects.toThrow("comment list failed");
+    });
+  });
 });

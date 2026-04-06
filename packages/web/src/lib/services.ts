@@ -19,6 +19,10 @@ import {
   getLeaves,
   getSiblings,
   formatPlanTree,
+  probePlanArtifact,
+  approvePlanArtifactInWorkspace,
+  updateMetadata,
+  getSessionsDir,
   type OrchestratorConfig,
   type PluginRegistry,
   type OpenCodeSessionManager,
@@ -34,6 +38,7 @@ import {
   isOrchestratorSession,
   TERMINAL_STATUSES,
 } from "@composio/ao-core";
+import { readFileSync } from "node:fs";
 
 // Static plugin imports — webpack needs these to be string literals
 import pluginRuntimeTmux from "@composio/ao-plugin-runtime-tmux";
@@ -221,6 +226,112 @@ async function relabelReopenedIssues(
   }
 }
 
+const PLAN_PENDING_LABEL = "agent:plan-pending";
+const PLAN_APPROVED_LABEL = "agent:plan-approved";
+
+/**
+ * If a planner session has a `.ao/plan.md` with `status: pending_approval`
+ * and has not already posted to the tracker, post the plan content as an
+ * issue comment and apply the `agent:plan-pending` label.
+ * Idempotent: sets `planPostedToTracker=true` in session metadata before posting.
+ */
+async function pushPlanToTracker(
+  session: Session,
+  tracker: Tracker,
+  project: ProjectConfig,
+  sessionsDir: string,
+): Promise<void> {
+  if (!session.workspacePath || !session.issueId || !tracker.updateIssue) return;
+  if (session.metadata["planPostedToTracker"] === "true") return;
+
+  const probe = probePlanArtifact(session.workspacePath);
+  if (!probe.found || probe.status === "approved") return;
+  if (probe.status !== "pending_approval") return;
+
+  let planContent: string;
+  try {
+    planContent = readFileSync(probe.path, "utf-8");
+  } catch {
+    return;
+  }
+
+  // Mark as posted before the API call to avoid re-posting on crash recovery.
+  updateMetadata(sessionsDir, session.id, { planPostedToTracker: "true" });
+
+  await tracker.updateIssue(
+    session.issueId,
+    {
+      comment: `## Plan (awaiting approval)\n\n${planContent}\n\n---\n_Reply **LGTM** or 👍 to approve this plan and allow the executor session to start._`,
+      labels: [PLAN_PENDING_LABEL],
+    },
+    project,
+  );
+  console.log(`[backlog] Posted plan for session ${session.id} (issue ${session.issueId})`);
+}
+
+/**
+ * Poll issue comments for "LGTM" text or 👍 emoji. When found, approve the
+ * plan artifact and swap the tracker label from `agent:plan-pending` to
+ * `agent:plan-approved`.
+ */
+async function pollPlanApprovalSignals(
+  session: Session,
+  tracker: Tracker,
+  project: ProjectConfig,
+): Promise<void> {
+  if (
+    !session.workspacePath ||
+    !session.issueId ||
+    !tracker.updateIssue ||
+    !tracker.getIssueComments
+  )
+    return;
+
+  // Only poll after the plan has been posted.
+  if (session.metadata["planPostedToTracker"] !== "true") return;
+
+  // Skip if already approved.
+  const probe = probePlanArtifact(session.workspacePath);
+  if (!probe.found || probe.status === "approved") return;
+
+  let comments: Awaited<ReturnType<NonNullable<typeof tracker.getIssueComments>>>;
+  try {
+    comments = await tracker.getIssueComments(session.issueId, project);
+  } catch {
+    return;
+  }
+
+  const approvalComment = comments.find((c) => {
+    const body = c.body.trim();
+    return body.toLowerCase().includes("lgtm") || body.includes("👍");
+  });
+  if (!approvalComment) return;
+
+  try {
+    approvePlanArtifactInWorkspace(
+      session.workspacePath,
+      session.metadata["planArtifactRelPath"],
+      { approvedBy: approvalComment.author },
+    );
+  } catch (err) {
+    console.error(`[backlog] Failed to approve plan for session ${session.id}:`, err);
+    return;
+  }
+
+  await tracker.updateIssue(
+    session.issueId,
+    {
+      comment: `Plan approved by @${approvalComment.author} via LGTM signal. Executor session will be spawned when CI gates are satisfied.`,
+      labels: [PLAN_APPROVED_LABEL],
+      removeLabels: [PLAN_PENDING_LABEL],
+    },
+    project,
+  );
+  console.log(
+    `[backlog] Plan approved for session ${session.id} by ${approvalComment.author} (issue ${session.issueId})`,
+  );
+}
+
 export async function pollBacklog(): Promise<void> {
   try {
     const { config, registry, sessionManager } = await getServices();
@@ -232,6 +343,22 @@ export async function pollBacklog(): Promise<void> {
 
     // Detect reopened issues: open state + agent:done label → relabel as agent:backlog
     await relabelReopenedIssues(config, registry);
+
+    // Push pending plans to tracker and poll for LGTM approval signals.
+    for (const session of allSessions) {
+      if (session.metadata["workerRole"] !== "planner") continue;
+      const project = config.projects[session.projectId];
+      if (!project?.tracker) continue;
+      const tracker = registry.get<Tracker>("tracker", project.tracker.plugin);
+      if (!tracker) continue;
+      const sessionsDir = getSessionsDir(config.configPath, project.path);
+      try {
+        await pushPlanToTracker(session, tracker, project, sessionsDir);
+        await pollPlanApprovalSignals(session, tracker, project);
+      } catch (err) {
+        console.error(`[backlog] Plan polling failed for session ${session.id}:`, err);
+      }
+    }
 
     const workerSessions = allSessions.filter(
       (session) => !isOrchestratorSession(session) && !TERMINAL_STATUSES.has(session.status),
