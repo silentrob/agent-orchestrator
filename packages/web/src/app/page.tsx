@@ -30,6 +30,7 @@ export default async function Home(props: { searchParams: Promise<{ project?: st
       projects={pageData.projects}
       initialGlobalPause={pageData.globalPause}
       orchestrators={pageData.orchestrators}
+      newIssueUrl={pageData.newIssueUrl}
     />
   );
 }

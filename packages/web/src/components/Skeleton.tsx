@@ -2,10 +2,12 @@
 
 interface EmptyStateProps {
   message?: string;
+  newIssueUrl?: string;
 }
 
 export function EmptyState({
   message,
+  newIssueUrl,
 }: EmptyStateProps) {
   const isDefault = !message;
   return (
@@ -24,10 +26,24 @@ export function EmptyState({
       <p className="text-[13px] text-[var(--color-text-muted)]">
         {isDefault ? (
           <>
-            No sessions running. Start one with{" "}
-            <code className="font-[var(--font-mono)] text-[var(--color-text-secondary)]">
-              ao start
-            </code>
+            No issues assigned yet.{" "}
+            {newIssueUrl ? (
+              <a
+                href={newIssueUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[var(--color-text-secondary)] underline underline-offset-2 hover:text-[var(--color-text-primary)]"
+              >
+                Create a new issue
+              </a>
+            ) : (
+              <>
+                Start one with{" "}
+                <code className="font-[var(--font-mono)] text-[var(--color-text-secondary)]">
+                  ao start
+                </code>
+              </>
+            )}
           </>
         ) : (
           message

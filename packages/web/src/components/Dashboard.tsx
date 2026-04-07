@@ -33,6 +33,7 @@ interface DashboardProps {
   projects?: ProjectInfo[];
   initialGlobalPause?: GlobalPauseState | null;
   orchestrators?: DashboardOrchestratorLink[];
+  newIssueUrl?: string;
 }
 
 const KANBAN_LEVELS = ["working", "pending", "review", "respond", "merge"] as const;
@@ -70,6 +71,7 @@ function DashboardInner({
   projects = [],
   initialGlobalPause = null,
   orchestrators,
+  newIssueUrl,
 }: DashboardProps) {
   const orchestratorLinks = orchestrators ?? EMPTY_ORCHESTRATORS;
   const { sessions, globalPause, connectionStatus } = useSessionEvents(
@@ -759,7 +761,7 @@ function DashboardInner({
           </div>
         )}
 
-        {!allProjectsView && !hasAnySessions && <EmptyState />}
+        {!allProjectsView && !hasAnySessions && <EmptyState newIssueUrl={newIssueUrl} />}
 
       </div>
     </div>
