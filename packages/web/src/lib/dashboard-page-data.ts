@@ -12,6 +12,7 @@ import { prCache, prCacheKey } from "@/lib/cache";
 import { getPrimaryProjectId, getProjectName, getAllProjects, type ProjectInfo } from "@/lib/project-name";
 import { filterProjectSessions, filterWorkerSessions } from "@/lib/project-utils";
 import { resolveGlobalPause, type GlobalPauseState } from "@/lib/global-pause";
+import type { ProjectConfig } from "@composio/ao-core";
 
 interface DashboardPageData {
   sessions: DashboardSession[];
@@ -20,6 +21,30 @@ interface DashboardPageData {
   projectName: string;
   projects: ProjectInfo[];
   selectedProjectId?: string;
+  newIssueUrl?: string;
+}
+
+export function resolveNewIssueUrl(project: ProjectConfig): string | undefined {
+  const plugin = project.tracker?.plugin;
+  if (!plugin) return undefined;
+
+  const normalizedPlugin = plugin.replace(/^tracker-/, "");
+
+  if (normalizedPlugin === "github") {
+    return `https://github.com/${project.repo}/issues/new`;
+  }
+
+  if (normalizedPlugin === "linear") {
+    const slug = project.tracker?.["workspaceSlug"] as string | undefined;
+    if (slug) return `https://linear.app/${slug}/issues/new`;
+    return undefined;
+  }
+
+  if (normalizedPlugin === "gitlab") {
+    return `https://gitlab.com/${project.repo}/-/issues/new`;
+  }
+
+  return undefined;
 }
 
 export const getDashboardProjectName = cache(function getDashboardProjectName(
@@ -59,6 +84,13 @@ export const getDashboardPageData = cache(async function getDashboardPageData(pr
     const allSessions = await sessionManager.list();
 
     pageData.globalPause = resolveGlobalPause(allSessions);
+
+    if (pageData.selectedProjectId) {
+      const projectConfig = config.projects[pageData.selectedProjectId];
+      if (projectConfig) {
+        pageData.newIssueUrl = resolveNewIssueUrl(projectConfig);
+      }
+    }
 
     const visibleSessions = filterProjectSessions(allSessions, projectFilter, config.projects);
     pageData.orchestrators = listDashboardOrchestrators(visibleSessions, config.projects);
