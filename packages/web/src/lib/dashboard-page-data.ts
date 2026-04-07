@@ -24,7 +24,7 @@ interface DashboardPageData {
   newIssueUrl?: string;
 }
 
-function resolveNewIssueUrl(project: ProjectConfig): string | undefined {
+export function resolveNewIssueUrl(project: ProjectConfig): string | undefined {
   const plugin = project.tracker?.plugin;
   if (!plugin) return undefined;
 
